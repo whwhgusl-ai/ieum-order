@@ -340,6 +340,7 @@ function DesignerApp({ user, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [orderTime, setOrderTime] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
+  const [allMyOrders, setAllMyOrders] = useState([]); // 전체 내 발주 (월별 내역용)
   const [editOrderId, setEditOrderId] = useState(null); // 수정 중인 발주ID
 
   useEffect(() => {
@@ -353,7 +354,11 @@ function DesignerApp({ user, onLogout }) {
   function loadMyOrders() {
     apiGet({ action:'orders', branch:user.branch })
       .then(d => {
-        if (d.orders) setMyOrders(d.orders.filter(o => o.name === user.name && ['대기','반려'].includes(o.status)));
+        if (d.orders) {
+          const mine = d.orders.filter(o => o.name === user.name);
+          setMyOrders(mine.filter(o => ['대기','반려'].includes(o.status)));
+          setAllMyOrders(mine);
+        }
       }).catch(()=>{});
   }
 
@@ -398,12 +403,13 @@ function DesignerApp({ user, onLogout }) {
 
   if (loading) return <Spinner />;
   if (step === 'return') return <ReturnScreen user={user} orders={completedOrders} onBack={() => setStep('catalog')} onDone={() => setStep('catalog')} />;
-  if (step === 'catalog') return <CatalogScreen user={user} products={products} cart={cart} onCart={(k,v) => setCart(p=>({...p,[k]:v}))} onGoCart={() => setStep('cart')} onLogout={onLogout} myOrders={myOrders} onEdit={handleEdit} onCancel={handleCancel} isEditing={!!editOrderId} onReturn={() => setStep('return')} hasCompleted={completedOrders.length > 0} />;
+  if (step === 'history') return <OrderHistoryScreen user={user} orders={allMyOrders} onBack={() => setStep('catalog')} />;
+  if (step === 'catalog') return <CatalogScreen user={user} products={products} cart={cart} onCart={(k,v) => setCart(p=>({...p,[k]:v}))} onGoCart={() => setStep('cart')} onLogout={onLogout} myOrders={myOrders} onEdit={handleEdit} onCancel={handleCancel} isEditing={!!editOrderId} onReturn={() => setStep('return')} hasCompleted={completedOrders.length > 0} onHistory={() => setStep('history')} />;
   if (step === 'cart') return <CartScreen user={user} products={products} cart={cart} onCart={(k,v) => setCart(p=>({...p,[k]:v}))} onBack={() => setStep('catalog')} onSubmit={handleSubmit} submitting={submitting} isEditing={!!editOrderId} />;
   if (step === 'done') return <DoneScreen user={user} orderTime={orderTime} itemCount={Object.values(cart).filter(v=>v>0).length} onReset={() => { setCart({}); setStep('catalog'); }} />;
 }
 
-function CatalogScreen({ user, products, cart, onCart, onGoCart, onLogout, myOrders=[], onEdit, onCancel, isEditing=false, onReturn, hasCompleted=false }) {
+function CatalogScreen({ user, products, cart, onCart, onGoCart, onLogout, myOrders=[], onEdit, onCancel, isEditing=false, onReturn, hasCompleted=false, onHistory }) {
   // 산화제 카테고리는 탭에서 숨김 (별도 모달로 선택)
   // 산화제는 카탈로그에서 숨김 - 발주 확인 화면 모달에서만 선택
   const OXIDIZER_CATS = ['NC 산화제', '미엘 산화제', '밀본 산화제'];
@@ -422,6 +428,7 @@ function CatalogScreen({ user, products, cart, onCart, onGoCart, onLogout, myOrd
           <div><div className="header-title">재료 발주</div><div className="header-sub">{user.branch} · {user.name}</div></div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {onHistory && <button onClick={onHistory} style={{background:'var(--gold-dim)',border:'1.5px solid var(--gold-border)',color:'var(--gold)',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>📋 내역</button>}
           {hasCompleted && onReturn && <button onClick={onReturn} style={{background:'rgba(224,92,92,0.15)',border:'1.5px solid rgba(224,92,92,0.4)',color:'var(--danger)',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>반품</button>}
           <button onClick={onLogout} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13,flexShrink:0}}>로그아웃</button>
         </div>
@@ -1172,6 +1179,93 @@ function MonthlyReport() {
   );
 }
 
+
+// ════════════════════════════════════════════════════
+//  내 발주 내역 (월별 조회) — 디자이너용
+// ════════════════════════════════════════════════════
+function OrderHistoryScreen({ user, orders, onBack }) {
+  const [openMonth, setOpenMonth] = useState(null);
+
+  // 취소 발주는 제외하고 월별로 묶기
+  const groups = useMemo(() => {
+    const map = {};
+    (orders || []).filter(o => o.status !== '취소').forEach(o => {
+      const dt = new Date(o.timestamp);
+      const key = isNaN(dt) ? '기타' : `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(o);
+    });
+    return Object.entries(map).map(([key, list]) => {
+      list.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const totalAmt = list.reduce((s,o) => s + o.items.reduce((ss,i)=>ss+(i.amount||0),0), 0);
+      const totalQty = list.reduce((s,o) => s + o.items.reduce((ss,i)=>ss+(i.qty||0),0), 0);
+      return { key, list, totalAmt, totalQty, count: list.length };
+    }).sort((a,b) => b.key.localeCompare(a.key));
+  }, [orders]);
+
+  // 가장 최근 달은 기본으로 펼침
+  useEffect(() => { if (groups.length && openMonth === null) setOpenMonth(groups[0].key); }, [groups]);
+
+  function monthLabel(key) {
+    if (key === '기타') return '날짜 미상';
+    const [y,m] = key.split('-');
+    return `${y}년 ${Number(m)}월`;
+  }
+
+  return (
+    <div className="screen">
+      <div className="header">
+        <button className="back-btn" onClick={onBack}>←</button>
+        <div className="header-left"><div><div className="header-title">내 발주 내역</div><div className="header-sub">{user.branch} · {user.name}</div></div></div>
+      </div>
+      <div className="scrollable">
+        {groups.length === 0 && <div className="empty-state">발주 내역이 없습니다</div>}
+        {groups.map(g => {
+          const open = openMonth === g.key;
+          return (
+            <div key={g.key} style={{marginBottom:10}}>
+              <div onClick={() => setOpenMonth(open ? null : g.key)}
+                style={{background:'var(--surface)',border:`1px solid ${open?'var(--gold-border)':'var(--border)'}`,borderRadius:12,padding:'14px 16px',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:15,fontWeight:700}}>{monthLabel(g.key)}</div>
+                  <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>발주 {g.count}건 · 총 {g.totalQty}개</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:14,color:'var(--gold)',fontWeight:700}}>{g.totalAmt.toLocaleString()}원</span>
+                  <span style={{fontSize:12,color:'var(--text3)',display:'inline-block',transform:open?'rotate(180deg)':'none',transition:'transform .2s'}}>▼</span>
+                </div>
+              </div>
+              {open && (
+                <div style={{padding:'8px 2px 0'}}>
+                  {g.list.map(o => (
+                    <div key={o.orderId} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 14px',marginBottom:8}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                        <span style={{fontSize:13,fontWeight:700}}>{formatDate(o.timestamp)}</span>
+                        <StatusBadge status={o.status}/>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                        {o.items.map((i,idx) => (
+                          <div key={idx} style={{display:'flex',justifyContent:'space-between',fontSize:13,gap:10}}>
+                            <span style={{color:'var(--text)',flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i.name}</span>
+                            <span style={{color:'var(--text2)',flexShrink:0}}>{i.qty}개{i.amount>0?` · ${i.amount.toLocaleString()}원`:''}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {o.memo && <div style={{marginTop:8,fontSize:12,color:'var(--text2)'}}>메모: {o.memo}</div>}
+                      <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid var(--border)',display:'flex',justifyContent:'flex-end',fontSize:13,fontWeight:700,color:'var(--gold)'}}>
+                        합계 {o.items.reduce((s,i)=>s+(i.amount||0),0).toLocaleString()}원
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ════════════════════════════════════════════════════
 //  반품 신청 화면
