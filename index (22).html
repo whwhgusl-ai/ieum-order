@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>430헤어 발주 시스템</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg:#0d0d0d;--surface:#181818;--surface2:#222;--surface3:#2c2c2c;
+      --gold:#c8a44a;--gold-dim:rgba(200,164,74,0.13);--gold-border:rgba(200,164,74,0.4);
+      --text:#f2f2f2;--text2:#999;--text3:#555;--border:#2d2d2d;
+      --success:#52b788;--danger:#e05c5c;--warning:#d4a017;--info:#5b9cf6;--r:12px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overscroll-behavior:none}
+    body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);max-width:480px;margin:0 auto;min-height:100vh}
+    #root{min-height:100vh;display:flex;flex-direction:column}
+    .screen{flex:1;display:flex;flex-direction:column}
+    .header{position:sticky;top:0;z-index:100;background:rgba(13,13,13,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .header-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+    .logo-chip{width:34px;height:34px;flex-shrink:0;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#000;letter-spacing:-0.5px}
+    .header-title{font-size:15px;font-weight:700}
+    .header-sub{font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .badge{flex-shrink:0;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
+    .back-btn{background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:2px 10px 2px 0;line-height:1}
+    .login-wrap{flex:1;padding:0 24px;display:flex;flex-direction:column;justify-content:center;gap:0}
+    .big-logo{width:76px;height:76px;margin:0 auto 20px;background:linear-gradient(145deg,#d4af5a,#9a6f20);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#000;letter-spacing:-1px;box-shadow:0 8px 36px rgba(200,164,74,0.35)}
+    .login-title{font-size:24px;font-weight:700;text-align:center;letter-spacing:-0.5px;margin-bottom:6px}
+    .login-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:32px}
+    .form-group{margin-bottom:14px}
+    .form-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;display:block}
+    .input-field{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;font-size:15px;color:var(--text);font-family:inherit;outline:none;transition:border-color .12s}
+    .input-field::placeholder{color:var(--text3)}
+    .input-field:focus{border-color:var(--gold)}
+    .input-field.error{border-color:var(--danger)}
+    .error-msg{font-size:12px;color:var(--danger);margin-top:6px;padding:10px 12px;background:rgba(224,92,92,0.08);border-radius:8px;line-height:1.5}
+    .success-msg{font-size:12px;color:var(--success);margin-top:6px;padding:10px 12px;background:rgba(82,183,136,0.08);border-radius:8px;line-height:1.5}
+    .btn-gold{width:100%;background:var(--gold);color:#000;border:none;border-radius:13px;padding:16px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .12s;margin-top:8px}
+    .btn-gold:active{transform:scale(.98)}
+    .btn-gold:disabled{background:var(--surface3);color:var(--text3);cursor:not-allowed;transform:none}
+    .btn-ghost{width:100%;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:13px;padding:14px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px;transition:all .12s}
+    .btn-ghost:active{transform:scale(.98)}
+    .btn-danger{width:100%;background:rgba(224,92,92,0.15);color:var(--danger);border:1.5px solid rgba(224,92,92,0.4);border-radius:13px;padding:14px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px;transition:all .12s}
+    .btn-success{width:100%;background:rgba(82,183,136,0.15);color:var(--success);border:1.5px solid rgba(82,183,136,0.4);border-radius:13px;padding:14px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:8px;transition:all .12s}
+    .divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+    .divider-text{font-size:12px;color:var(--text3)}
+    .branch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .branch-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 6px;text-align:center;font-size:14px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;font-family:inherit}
+    .branch-btn:active{transform:scale(.96)}
+    .branch-btn.sel{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);font-weight:700}
+    .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .role-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 6px;text-align:center;font-size:14px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;font-family:inherit}
+    .role-btn.sel{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);font-weight:700}
+    .cat-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid var(--border)}
+    .cat-tabs::-webkit-scrollbar{display:none}
+    .cat-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;transition:all .12s;white-space:nowrap;background:var(--surface2);border:1px solid var(--border)}
+    .cat-tab.active{background:var(--gold);color:#000;font-weight:700;border-color:var(--gold)}
+    .product-list{flex:1;overflow-y:auto;padding:12px 20px 130px}
+    .product-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:border-color .12s,background .12s}
+    .product-item.in-cart{border-color:var(--gold-border);background:var(--gold-dim)}
+    .product-info{flex:1}
+    .product-name{font-size:14px;font-weight:500}
+    .product-unit{font-size:11px;color:var(--text3);margin-top:3px}
+    .qty-row{display:flex;align-items:center;gap:10px}
+    .qty-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface3);color:var(--text);font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:transform .08s}
+    .qty-btn:active{transform:scale(.88)}
+    .qty-btn.plus{background:var(--gold);border-color:var(--gold);color:#000;font-weight:800}
+    .qty-num{min-width:22px;text-align:center;font-size:16px;font-weight:700;color:var(--gold)}
+    .qty-num.zero{color:var(--text3);font-weight:400}
+    .bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;padding:16px 20px 20px;background:linear-gradient(to top,var(--bg) 65%,transparent);z-index:100}
+    .cart-bar{width:100%;background:var(--gold);border:none;border-radius:14px;padding:15px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;box-shadow:0 4px 24px rgba(200,164,74,0.4);transition:transform .12s}
+    .cart-bar:active{transform:scale(.98)}
+    .cart-cnt{background:rgba(0,0,0,0.18);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800;color:#000}
+    .cart-list{flex:1;overflow-y:auto;padding:12px 20px 160px}
+    .cart-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    .cart-item-info{flex:1}
+    .cart-item-name{font-size:14px;font-weight:500}
+    .cart-item-qty{font-size:13px;color:var(--gold);font-weight:700;margin-top:3px}
+    .remove-btn{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:4px;line-height:1}
+    .memo-field{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;resize:none;min-height:80px;transition:border-color .12s}
+    .memo-field:focus{border-color:var(--gold)}
+    .memo-field::placeholder{color:var(--text3)}
+    .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center}
+    .done-circle{width:84px;height:84px;background:rgba(82,183,136,0.12);border:2px solid var(--success);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 24px;animation:popIn .45s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes popIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+    .done-title{font-size:22px;font-weight:700;margin-bottom:8px}
+    .done-sub{font-size:14px;color:var(--text2);line-height:1.7}
+    .done-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px 20px;margin:24px 0;width:100%;text-align:left}
+    .done-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}
+    .done-label{color:var(--text2)}
+    .done-val{font-weight:600}
+    .status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+    .st-대기{background:rgba(153,153,153,.15);color:#aaa}
+    .st-승인{background:rgba(82,183,136,.15);color:var(--success)}
+    .st-반려{background:rgba(224,92,92,.15);color:var(--danger)}
+    .st-전송완료{background:rgba(91,156,246,.15);color:var(--info)}
+    .st-입고완료{background:rgba(167,119,219,.15);color:#b794f4}
+    .st-분출완료{background:var(--gold-dim);color:var(--gold)}
+    .st-비활성{background:rgba(80,80,80,.3);color:#666}
+    .mgr-tabs{display:flex;border-bottom:1px solid var(--border)}
+    .mgr-tab{flex:1;padding:13px;text-align:center;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s}
+    .mgr-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+    .order-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .12s}
+    .order-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .order-card-name{font-size:15px;font-weight:700}
+    .order-card-meta{font-size:12px;color:var(--text3);margin-top:3px}
+    .order-card-items{font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .item-chip{background:var(--surface3);border-radius:6px;padding:2px 8px}
+    .order-detail-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+    .scrollable{flex:1;overflow-y:auto;padding:12px 20px 130px}
+    .section-title{font-size:13px;font-weight:700;color:var(--text2);padding:14px 0 8px;display:flex;align-items:center;gap:8px}
+    .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .empty-state{text-align:center;padding:48px 20px;color:var(--text3);font-size:14px}
+    .section-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;display:block}
+    .loading-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:200px}
+    .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+    .modal-sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px}
+    .modal-title{font-size:17px;font-weight:700;margin-bottom:16px}
+    .reject-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .reject-reason-btn{background:var(--surface3);border:1.5px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--text);font-family:inherit;cursor:pointer;transition:all .12s}
+    .reject-reason-btn.sel{background:rgba(224,92,92,.15);border-color:rgba(224,92,92,.5);color:var(--danger)}
+    .user-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px}
+    .user-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .user-name{font-size:15px;font-weight:700}
+    .user-meta{font-size:12px;color:var(--text3)}
+    .user-id{font-size:11px;color:var(--text2);margin-top:2px;font-family:monospace}
+    .num-input{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:700;color:var(--gold);font-family:inherit;outline:none;width:80px;text-align:center;transition:border-color .12s}
+    .num-input:focus{border-color:var(--gold)}
+    .rcv-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+    .dist-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+    .dist-product-name{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--gold)}
+    .dist-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+    .dist-row:last-child{border-bottom:none}
+    .dist-designer{font-size:13px;font-weight:600}
+    .dist-ordered{font-size:12px;color:var(--text3)}
+    .export-btn{background:var(--gold);color:#000;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .12s;flex-shrink:0}
+    .export-btn:active{transform:scale(.97)}
+    .product-total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+    .summary-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+    .summary-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:13px}
+    .branch-status-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px}
+    .stat-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .stat-chip{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbzA2mg82K0mMO6Mt2qsYMdYj8GL77MTC3ZGxHjNT5-VoYNyEJDg5cQHQAMdVVtdENzU7w/exec';
+const BRANCHES = ['일곡점','수완점','금호점','상무점','첨단점','계림점'];
+const BATCH_RULES = { 'NC 염모제': 6, '미엘 염모제': 6, '밀본 염모제': 12 };
+const REJECT_PRESETS = ['수량 확인 필요','품목 오류','중복 발주','재고 있음','기타'];
+const USER_REJECT_PRESETS = ['지점 오류','역할 오류','중복 계정','본인 확인 불가','기타'];
+
+async function apiGet(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(`${GAS_URL}${qs ? '?' + qs : ''}`);
+  return res.json();
+}
+async function apiPost(body) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+async function apiPostNoRead(body) {
+  await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(body),
+    mode: 'no-cors'
+  });
+}
+
+function StatusBadge({ status }) {
+  return <span className={`status-badge st-${status}`}>{status}</span>;
+}
+function Spinner() {
+  return <div className="loading-wrap"><div className="spinner"/><span style={{fontSize:13,color:'var(--text3)'}}>불러오는 중...</span></div>;
+}
+function validateBatch(items) {
+  const t = {};
+  items.forEach(i => { const r = BATCH_RULES[i.category]; if (r) t[i.category] = (t[i.category]||0)+i.qty; });
+  return Object.entries(t).filter(([c,n]) => n%BATCH_RULES[c]!==0).map(([c,n]) => ({c,n,m:BATCH_RULES[c],need:BATCH_RULES[c]-(n%BATCH_RULES[c])}));
+}
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d).slice(0,16);
+  return `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+}
+
+// ════════════════════════════════════════════════════
+//  통합 로그인 / 회원가입
+// ════════════════════════════════════════════════════
+function AuthScreen({ onLogin }) {
+  const [mode, setMode] = useState('login'); // login | register | pending
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [branch, setBranch] = useState('');
+  const [role, setRole] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  async function handleLogin() {
+    if (!userId.trim() || !password.trim()) return;
+    setLoading(true); setErrorMsg('');
+    try {
+      const res = await apiPost({ action: 'login', userId: userId.trim(), password: password.trim() });
+      if (res.success) {
+        onLogin(res.user);
+      } else {
+        setErrorMsg(res.message || '로그인에 실패했습니다.');
+      }
+    } catch { setErrorMsg('네트워크 오류가 발생했습니다.'); }
+    finally { setLoading(false); }
+  }
+
+  async function handleRegister() {
+    if (!userId.trim() || !password.trim() || !name.trim() || !branch || !role) {
+      setErrorMsg('모든 항목을 입력해주세요.'); return;
+    }
+    if (userId.trim().length < 4) { setErrorMsg('아이디는 4자 이상이어야 합니다.'); return; }
+    if (password.trim().length < 4) { setErrorMsg('비밀번호는 4자 이상이어야 합니다.'); return; }
+    setLoading(true); setErrorMsg('');
+    try {
+      const res = await apiPost({ action: 'register', userId: userId.trim(), password: password.trim(), name: name.trim(), branch, role });
+      if (res.success) {
+        setSuccessMsg('가입신청이 완료되었습니다!\n이승섭 이사님 승인 후 로그인이 가능합니다.');
+        setMode('pending');
+      } else {
+        setErrorMsg(res.message || '가입에 실패했습니다.');
+      }
+    } catch { setErrorMsg('네트워크 오류가 발생했습니다.'); }
+    finally { setLoading(false); }
+  }
+
+  if (mode === 'pending') return (
+    <div className="screen">
+      <div className="done-wrap">
+        <div className="done-circle" style={{ borderColor:'var(--gold)', background:'rgba(200,164,74,0.12)' }}>⏳</div>
+        <div className="done-title">승인 대기 중</div>
+        <div className="done-sub" style={{ whiteSpace:'pre-line' }}>{successMsg}</div>
+        <button className="btn-ghost" style={{ marginTop:32 }} onClick={() => { setMode('login'); setSuccessMsg(''); }}>로그인으로 돌아가기</button>
+      </div>
+    </div>
+  );
+
+  if (mode === 'register') return (
+    <div className="screen">
+      <div className="header">
+        <button className="back-btn" onClick={() => { setMode('login'); setErrorMsg(''); }}>←</button>
+        <div className="header-left">
+          <div className="header-title">가입 신청</div>
+        </div>
+      </div>
+      <div className="scrollable" style={{ paddingTop:20 }}>
+        <div className="form-group">
+          <label className="form-label">아이디</label>
+          <input className="input-field" placeholder="사용할 아이디 (4자 이상)" value={userId} onChange={e => setUserId(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">비밀번호</label>
+          <input className="input-field" type="password" placeholder="비밀번호 (4자 이상)" value={password} onChange={e => setPassword(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">이름</label>
+          <input className="input-field" placeholder="실명을 입력하세요" value={name} onChange={e => setName(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">지점</label>
+          <div className="branch-grid">
+            {BRANCHES.map(b => <button key={b} className={`branch-btn${branch===b?' sel':''}`} onClick={() => setBranch(b)}>{b}</button>)}
+          </div>
+        </div>
+        <div className="form-group" style={{ marginTop:16 }}>
+          <label className="form-label">역할</label>
+          <div className="role-grid">
+            {['디자이너','매니저'].map(r => <button key={r} className={`role-btn${role===r?' sel':''}`} onClick={() => setRole(r)}>{r}</button>)}
+          </div>
+        </div>
+        {errorMsg && <div className="error-msg">{errorMsg}</div>}
+        <button className="btn-gold" disabled={loading} onClick={handleRegister}>
+          {loading ? '신청 중...' : '가입 신청하기'}
+        </button>
+        <div style={{ fontSize:12, color:'var(--text3)', textAlign:'center', marginTop:12, lineHeight:1.6 }}>
+          가입 신청 후 이승섭 이사님 승인이 필요합니다
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="screen">
+      <div className="login-wrap">
+        <div className="big-logo">430</div>
+        <div className="login-title">발주 시스템</div>
+        <div className="login-sub">430헤어 재료 발주</div>
+        <div className="form-group">
+          <label className="form-label">아이디</label>
+          <input className="input-field" placeholder="아이디" value={userId} onChange={e => setUserId(e.target.value)} onKeyDown={e => e.key==='Enter' && handleLogin()} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">비밀번호</label>
+          <input className="input-field" type="password" placeholder="비밀번호" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key==='Enter' && handleLogin()} />
+        </div>
+        {errorMsg && <div className="error-msg" style={{ whiteSpace:'pre-line' }}>{errorMsg}</div>}
+        <button className="btn-gold" disabled={loading || !userId.trim() || !password.trim()} onClick={handleLogin}>
+          {loading ? '로그인 중...' : '로그인'}
+        </button>
+        <div className="divider"><span className="divider-text">처음이신가요?</span></div>
+        <button className="btn-ghost" onClick={() => { setMode('register'); setErrorMsg(''); }}>가입 신청하기</button>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  디자이너 앱
+// ════════════════════════════════════════════════════
+function DesignerApp({ user, onLogout }) {
+  const [step, setStep] = useState('catalog');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [orderTime, setOrderTime] = useState(null);
+  const [myOrders, setMyOrders] = useState([]);
+  const [editOrderId, setEditOrderId] = useState(null); // 수정 중인 발주ID
+
+  useEffect(() => {
+    apiGet({ action: 'products' })
+      .then(d => { if (d.products) setProducts(d.products); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    loadMyOrders();
+  }, []);
+
+  function loadMyOrders() {
+    apiGet({ action:'orders', branch:user.branch })
+      .then(d => {
+        if (d.orders) setMyOrders(d.orders.filter(o => o.name === user.name && ['대기','반려'].includes(o.status)));
+      }).catch(()=>{});
+  }
+
+  async function handleSubmit(memo) {
+    setSubmitting(true);
+    const items = products.filter(p => (cart[p.name]||0) > 0).map(p => ({ ...p, qty: cart[p.name] }));
+    try {
+      // 수정 모드면 기존 발주 먼저 취소
+      if (editOrderId) {
+        await apiPost({ action:'cancelOrder', orderId:editOrderId });
+        setEditOrderId(null);
+      }
+      await apiPostNoRead({ action:'submitOrder', branch:user.branch, name:user.name, items, memo });
+      setOrderTime(new Date()); setStep('done');
+      loadMyOrders();
+    } catch { alert('발주 중 오류가 발생했습니다.'); }
+    finally { setSubmitting(false); }
+  }
+
+  async function handleCancel(orderId) {
+    if (!window.confirm('이 발주를 취소하시겠습니까?')) return;
+    await apiPost({ action:'cancelOrder', orderId });
+    loadMyOrders();
+  }
+
+  function handleEdit(order) {
+    // 기존 발주 품목을 카트에 세팅
+    const newCart = {};
+    order.items.forEach(item => { newCart[item.name] = item.qty; });
+    setCart(newCart);
+    setEditOrderId(order.orderId);
+    setStep('catalog');
+  }
+
+  if (loading) return <Spinner />;
+  if (step === 'catalog') return <CatalogScreen user={user} products={products} cart={cart} onCart={(k,v) => setCart(p=>({...p,[k]:v}))} onGoCart={() => setStep('cart')} onLogout={onLogout} myOrders={myOrders} onEdit={handleEdit} onCancel={handleCancel} isEditing={!!editOrderId} />;
+  if (step === 'cart') return <CartScreen user={user} products={products} cart={cart} onCart={(k,v) => setCart(p=>({...p,[k]:v}))} onBack={() => setStep('catalog')} onSubmit={handleSubmit} submitting={submitting} isEditing={!!editOrderId} />;
+  if (step === 'done') return <DoneScreen user={user} orderTime={orderTime} itemCount={Object.values(cart).filter(v=>v>0).length} onReset={() => { setCart({}); setStep('catalog'); }} />;
+}
+
+function CatalogScreen({ user, products, cart, onCart, onGoCart, onLogout, myOrders=[], onEdit, onCancel, isEditing=false }) {
+  // 산화제 카테고리는 탭에서 숨김 (별도 모달로 선택)
+  // 산화제는 카탈로그에서 숨김 - 발주 확인 화면 모달에서만 선택
+  const OXIDIZER_CATS = ['NC 산화제', '미엘 산화제', '밀본 산화제'];
+  const mainCats = useMemo(() => [...new Set(products.filter(p => !OXIDIZER_CATS.includes(p.category)).map(p => p.category))], [products]);
+  const [cat, setCat] = useState('');
+  const activeCat = cat || mainCats[0] || '';
+  const filtered = products.filter(p => p.category === activeCat);
+  const cartCount = Object.values(cart).filter(v => v > 0).length;
+  const cartTotal = products.filter(p => (cart[p.name]||0) > 0).reduce((s,p) => s + (cart[p.name]||0) * (p.employeePrice||0), 0);
+
+  return (
+    <div className="screen">
+      <div className="header">
+        <div className="header-left">
+          <div className="logo-chip">430</div>
+          <div><div className="header-title">재료 발주</div><div className="header-sub">{user.branch} · {user.name}</div></div>
+        </div>
+        <button onClick={onLogout} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13,flexShrink:0}}>로그아웃</button>
+      </div>
+      <div className="cat-tabs">
+        {mainCats.map(c => <div key={c} className={`cat-tab${activeCat===c?' active':''}`} onClick={() => setCat(c)}>{c}</div>)}
+      </div>
+      <div className="product-list">
+        {filtered.map(p => {
+          const qty = cart[p.name] || 0;
+          return (
+            <div key={p.name} className={`product-item${qty>0?' in-cart':''}`}>
+              <div className="product-info">
+                <div className="product-name">{p.name}</div>
+                <div className="product-unit">{p.category}{p.employeePrice > 0 ? ` · ${p.employeePrice.toLocaleString()}원` : ''}</div>
+                {qty > 0 && p.employeePrice > 0 && (
+                  <div style={{fontSize:12,color:'var(--gold)',fontWeight:700,marginTop:3}}>
+                    = {(qty * p.employeePrice).toLocaleString()}원
+                  </div>
+                )}
+              </div>
+              <div className="qty-row">
+                <button className="qty-btn" onClick={() => onCart(p.name, Math.max(0, qty-1))}>−</button>
+                <span className={`qty-num${qty===0?' zero':''}`}>{qty}</span>
+                <button className="qty-btn plus" onClick={() => onCart(p.name, qty+1)}>+</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {/* 대기/반려 중인 내 발주 목록 */}
+      {myOrders.length > 0 && (
+        <div style={{padding:'0 20px 12px'}}>
+          <div className="section-title" style={{marginTop:8}}>내 발주 내역</div>
+          {myOrders.map(o => (
+            <div key={o.orderId} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'12px 14px',marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <div>
+                  <span style={{fontSize:13,fontWeight:700}}>{o.items.length}품목 · {formatDate(o.timestamp)}</span>
+                  <span className={`status-badge st-${o.status}`} style={{marginLeft:8}}>{o.status}</span>
+                </div>
+                <div style={{fontSize:13,color:'var(--gold)',fontWeight:700}}>{o.items.reduce((s,i)=>s+i.amount,0).toLocaleString()}원</div>
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button onClick={() => onEdit && onEdit(o)} style={{flex:1,background:'rgba(91,156,246,0.15)',color:'var(--info)',border:'1.5px solid rgba(91,156,246,0.4)',borderRadius:9,padding:'8px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>✏️ 수정</button>
+                <button onClick={() => onCancel && onCancel(o.orderId)} style={{flex:1,background:'rgba(224,92,92,0.1)',color:'var(--danger)',border:'1.5px solid rgba(224,92,92,0.3)',borderRadius:9,padding:'8px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>✕ 취소</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(cartCount > 0 || isEditing) && (
+        <div className="bottom-bar">
+          <button className="cart-bar" onClick={onGoCart}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <span className="cart-cnt">{cartCount}</span>
+              <span style={{fontSize:15,fontWeight:700,color:'#000'}}>{isEditing ? '발주 수정 확인하기' : '발주 확인하기'}</span>
+            </div>
+            <span style={{fontSize:14,fontWeight:700,color:'rgba(0,0,0,0.6)'}}>{cartTotal > 0 ? cartTotal.toLocaleString()+'원' : '→'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CartScreen({ user, products, cart, onCart, onBack, onSubmit, submitting }) {
+  const [memo, setMemo] = useState('');
+  const [oxModal, setOxModal] = useState(null); // { linkedCat, needed, options }
+  const items = products.filter(p => (cart[p.name]||0) > 0).map(p => ({ ...p, qty: cart[p.name] }));
+  const totalAmt = items.reduce((s,i) => s + i.qty * (i.employeePrice||0), 0);
+  const errors = validateBatch(items);
+
+  // 산화제 규칙: [염모제 카테고리, 산화제 카테고리, 라벨, 배수]
+  const OX_RULES = [
+    ['NC 염모제',   'NC 산화제',    'NC',   6],
+    ['미엘 염모제', '미엘 산화제',  '미엘', 6],
+    ['밀본 염모제', '밀본 산화제',  '밀본', 12],
+  ];
+
+  function checkOxidizers() {
+    for (const [dyeCat, oxCat, label, per] of OX_RULES) {
+      const dyeTotal  = items.filter(i => i.category === dyeCat).reduce((s,i) => s+i.qty, 0);
+      if (dyeTotal === 0) continue;
+      const needed   = Math.floor(dyeTotal / per);
+      const selected = items.filter(i => i.category === oxCat).reduce((s,i) => s+i.qty, 0);
+      if (selected !== needed) {
+        return { linkedCat: dyeCat, catLabel: label, needed, selected, per,
+          options: products.filter(p => p.category === oxCat) };
+      }
+    }
+    return null;
+  }
+
+  const oxError = checkOxidizers();
+  const canSubmit = !submitting && items.length > 0 && errors.length === 0 && !oxError;
+
+  return (
+    <div className="screen">
+      <div className="header">
+        <button className="back-btn" onClick={onBack}>←</button>
+        <div className="header-left"><div><div className="header-title">발주 확인</div><div className="header-sub">{user.branch} · {user.name}</div></div></div>
+        <div className="badge">{items.length}품목</div>
+      </div>
+      <div className="cart-list">
+        {items.map(item => (
+          <div key={item.name} className="cart-item">
+            <div className="cart-item-info">
+              <div className="cart-item-name">{item.name}</div>
+              <div className="cart-item-qty">{item.qty}개{item.employeePrice > 0 ? ` · ${(item.qty * item.employeePrice).toLocaleString()}원` : ` · ${item.category}`}</div>
+            </div>
+            <div className="qty-row">
+              <button className="qty-btn" onClick={() => onCart(item.name, Math.max(0,item.qty-1))}>−</button>
+              <span className="qty-num">{item.qty}</span>
+              <button className="qty-btn plus" onClick={() => onCart(item.name, item.qty+1)}>+</button>
+              <button className="remove-btn" onClick={() => onCart(item.name, 0)}>×</button>
+            </div>
+          </div>
+        ))}
+        {['NC 염모제','미엘 염모제','밀본 염모제'].map(cat => {
+          const ci = items.filter(i => i.category===cat);
+          if (!ci.length) return null;
+          const total = ci.reduce((s,i)=>s+i.qty,0), m = BATCH_RULES[cat], ok = total%m===0;
+          return (
+            <div key={cat} style={{margin:'6px 0',padding:'10px 14px',borderRadius:10,background:ok?'rgba(82,183,136,0.12)':'rgba(224,92,92,0.12)',border:`1px solid ${ok?'#52b788':'#e05c5c'}`,display:'flex',justifyContent:'space-between'}}>
+              <span style={{fontSize:13,color:ok?'var(--success)':'var(--danger)',fontWeight:600}}>{cat}</span>
+              <span style={{fontSize:13,color:ok?'var(--success)':'var(--danger)'}}>{total}개 {ok?`✓ (${m}배수)`:`✗ ${m-(total%m)}개 부족`}</span>
+            </div>
+          );
+        })}
+        <div style={{height:20}}/>
+
+        {/* 산화제 선택 상태 카드 */}
+        {[['NC 염모제','NC 산화제','NC',6], ['미엘 염모제','미엘 산화제','미엘',6], ['밀본 염모제','밀본 산화제','밀본',12]].map(([linkedCat, oxCat, label, per]) => {
+          const dye = items.filter(i => i.category === linkedCat).reduce((s,i) => s+i.qty, 0);
+          if (dye === 0) return null;
+          const needed = Math.floor(dye / per);
+          const selected = items.filter(i => i.category === oxCat).reduce((s,i) => s+i.qty, 0);
+          const ok = selected === needed;
+          const oxItems = items.filter(i => i.category === oxCat);
+          return (
+            <div key={linkedCat} onClick={() => setOxModal({ linkedCat, catLabel: label, needed, selected, options: products.filter(p => p.category === oxCat) })}
+              style={{margin:'6px 0',padding:'12px 14px',borderRadius:12,background:ok?'rgba(82,183,136,0.1)':'rgba(224,92,92,0.1)',border:`1.5px solid ${ok?'#52b788':'#e05c5c'}`,cursor:'pointer',userSelect:'none'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:13,fontWeight:700,color:ok?'var(--success)':'var(--danger)'}}>{label} 산화제 선택</span>
+                <span style={{fontSize:12,color:ok?'var(--success)':'var(--danger)',fontWeight:700}}>
+                  {ok ? `✓ ${selected}개 완료` : `✗ ${needed}개 필요 · ${selected}개 선택`}
+                </span>
+              </div>
+              {oxItems.length > 0 && <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>{oxItems.map(i => `${i.name} ${i.qty}개`).join(' · ')}</div>}
+              {!ok && <div style={{fontSize:11,color:'var(--danger)',marginTop:4}}>탭하여 산화제 선택 →</div>}
+            </div>
+          );
+        })}
+
+        {totalAmt > 0 && (
+          <div style={{background:'var(--surface2)',border:'1px solid var(--gold-border)',borderRadius:12,padding:'14px 16px',margin:'8px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:14,color:'var(--text2)'}}>합계 ({items.length}품목)</span>
+            <span style={{fontSize:17,fontWeight:800,color:'var(--gold)'}}>{totalAmt.toLocaleString()}원</span>
+          </div>
+        )}
+        <div className="section-label">메모 (선택)</div>
+        <textarea className="memo-field" placeholder="특이사항이 있으면 입력하세요" value={memo} onChange={e=>setMemo(e.target.value)}/>
+      </div>
+      <div className="bottom-bar">
+        <button className="btn-gold" onClick={() => {
+          if(errors.length){alert(errors.map(e=>`⚠️ ${e.c}\n${e.n}개 → ${e.need}개 부족`).join('\n\n'));return;}
+          const oxErr = checkOxidizers();
+          if(oxErr){setOxModal(oxErr);return;}
+          onSubmit(memo);
+        }} disabled={!canSubmit} style={{opacity:canSubmit?1:0.55}}>
+          {submitting?'전송 중...':`${user.branch} 발주 제출하기`}
+        </button>
+        {errors.length>0 && <div style={{textAlign:'center',fontSize:12,color:'var(--danger)',marginTop:8}}>염모제 수량을 확인해주세요</div>}
+        {oxError && !errors.length && <div style={{textAlign:'center',fontSize:12,color:'var(--danger)',marginTop:8}}>산화제를 선택해주세요</div>}
+      </div>
+
+      {/* 산화제 선택 모달 */}
+      {oxModal && (
+        <div className="modal-overlay" onClick={() => setOxModal(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">{oxModal.catLabel} 산화제 선택</div>
+            <div style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>
+              {oxModal.catLabel} 염모제 {oxModal.needed * (oxModal.per||6)}개당 산화제 <strong style={{color:'var(--gold)'}}>{oxModal.needed}개</strong> 필요
+              <br/><span style={{fontSize:11,color:'var(--text3)'}}>현재 {oxModal.selected}개 선택됨</span>
+            </div>
+            {oxModal.options.map(opt => {
+              const qty = cart[opt.name] || 0;
+              return (
+                <div key={opt.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:600}}>{opt.name}</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>산화제 농도</div>
+                  </div>
+                  <div className="qty-row">
+                    <button className="qty-btn" onClick={() => onCart(opt.name, Math.max(0, qty-1))}>−</button>
+                    <span className={`qty-num${qty===0?' zero':''}`}>{qty}</span>
+                    <button className="qty-btn plus" onClick={() => onCart(opt.name, qty+1)}>+</button>
+                  </div>
+                </div>
+              );
+            })}
+            <button className="btn-gold" style={{marginTop:16}} onClick={() => setOxModal(null)}>확인</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DoneScreen({ user, orderTime, itemCount, onReset }) {
+  return (
+    <div className="screen">
+      <div className="done-wrap">
+        <div className="done-circle">✓</div>
+        <div className="done-title">발주 완료!</div>
+        <div className="done-sub">발주서가 매니저에게 전달됩니다<br/>확인 후 처리해드리겠습니다</div>
+        <div className="done-card">
+          <div className="done-row"><span className="done-label">지점</span><span className="done-val">{user.branch}</span></div>
+          <div className="done-row"><span className="done-label">담당자</span><span className="done-val">{user.name}</span></div>
+          <div className="done-row"><span className="done-label">품목 수</span><span className="done-val">{itemCount}품목</span></div>
+          <div className="done-row"><span className="done-label">제출 시간</span><span className="done-val">{orderTime?`${orderTime.getMonth()+1}월 ${orderTime.getDate()}일 ${String(orderTime.getHours()).padStart(2,'0')}:${String(orderTime.getMinutes()).padStart(2,'0')}`:''}</span></div>
+        </div>
+        <button className="btn-gold" onClick={onReset}>추가 발주하기</button>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  매니저 앱
+// ════════════════════════════════════════════════════
+function ManagerApp({ user, onLogout }) {
+  const [tab, setTab] = useState('orders');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [sending, setSending] = useState(false);
+  const [rcvStep, setRcvStep] = useState('list');
+  const [rcvData, setRcvData] = useState(null);
+  const [distData, setDistData] = useState(null);
+  // 내 발주용
+  const [products, setProducts] = useState([]);
+  const [mgrCart, setMgrCart] = useState({});
+  const [mgrStep, setMgrStep] = useState('catalog'); // catalog | cart
+  const [mgrSubmitting, setMgrSubmitting] = useState(false);
+  const [mgrDone, setMgrDone] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+
+  function load() {
+    setLoading(true);
+    apiGet({ action:'orders', branch:user.branch })
+      .then(d => { if(d.orders) setOrders(d.orders); })
+      .catch(()=>{})
+      .finally(()=>setLoading(false));
+  }
+  useEffect(()=>{
+    load();
+    apiGet({ action:'products' }).then(d => { if(d.products) setProducts(d.products); }).catch(()=>{});
+  },[]);
+
+  async function handleApprove(orderId) {
+    const res = await apiPost({ action:'approveOrder', orderId });
+    if(res.success) { setOrders(p=>p.map(o=>o.orderId===orderId?{...o,status:'승인'}:o)); setDetail(null); }
+  }
+
+  async function handleRevert(orderId) {
+    if (!window.confirm('승인을 취소하고 대기 상태로 되돌리시겠습니까?')) return;
+    const res = await apiPost({ action:'revertOrder', orderId });
+    if(res.success) { setOrders(p=>p.map(o=>o.orderId===orderId?{...o,status:'대기'}:o)); setDetail(null); }
+  }
+
+  async function handleCancelOrder(orderId) {
+    if (!window.confirm('이 발주를 취소하시겠습니까?')) return;
+    const res = await apiPost({ action:'cancelOrder', orderId });
+    if(res.success) { setOrders(p=>p.filter(o=>o.orderId!==orderId)); setDetail(null); }
+  }
+
+  function handleEditOrder(order) {
+    // 기존 발주 품목을 카트에 세팅해서 수정 화면으로
+    const newCart = {};
+    order.items.forEach(item => { newCart[item.name] = item.qty; });
+    setMgrCart(newCart);
+    setEditingOrderId(order.orderId);
+    setTab('myorder');
+    setMgrStep('catalog');
+  }
+  async function handleReject(orderId, reason) {
+    const res = await apiPost({ action:'rejectOrder', orderId, reason });
+    if(res.success) { setOrders(p=>p.map(o=>o.orderId===orderId?{...o,status:'반려',rejectReason:reason}:o)); setRejectModal(null); setDetail(null); }
+  }
+  async function handleMgrSubmit(memo) {
+    setMgrSubmitting(true);
+    const items = products.filter(p => (mgrCart[p.name]||0) > 0).map(p => ({ ...p, qty: mgrCart[p.name] }));
+    try {
+      if (editingOrderId) {
+        await apiPost({ action:'cancelOrder', orderId:editingOrderId });
+        setEditingOrderId(null);
+      }
+      await apiPostNoRead({ action:'submitOrder', branch:user.branch, name:`${user.name}(매니저)`, items, memo });
+      setMgrDone(true);
+      setMgrCart({});
+      setMgrStep('catalog');
+      load();
+    } catch { alert('발주 중 오류가 발생했습니다.'); }
+    finally { setMgrSubmitting(false); }
+  }
+
+  async function handleSendToHQ() {
+    const cnt = orders.filter(o=>o.status==='승인').length;
+    if(!cnt){alert('승인된 발주가 없습니다.');return;}
+    if(!window.confirm(`${user.branch}의 승인된 발주 ${cnt}건을 본사에 전송하시겠습니까?`)) return;
+    setSending(true);
+    const res = await apiPost({ action:'sendToHQ', branch:user.branch });
+    if(res.success) setOrders(p=>p.map(o=>o.status==='승인'?{...o,status:'전송완료'}:o));
+    setSending(false);
+    alert('✅ 본사 전송 완료');
+  }
+
+  function startReceiving() {
+    const sent = orders.filter(o=>o.status==='전송완료');
+    if(!sent.length){alert('전송완료된 발주가 없습니다.');return;}
+    const map = {};
+    sent.forEach(o=>o.items.forEach(item=>{
+      if(!map[item.name]) map[item.name]={name:item.name,category:item.category,supplier:item.supplier,orderedQty:0,receivedQty:0};
+      map[item.name].orderedQty+=item.qty;
+    }));
+    Object.values(map).forEach(i=>i.receivedQty=i.orderedQty);
+    setRcvData(Object.values(map)); setRcvStep('form');
+  }
+  async function handleConfirmReceiving(items) {
+    await apiPost({ action:'confirmReceiving', branch:user.branch, items });
+    setOrders(p=>p.map(o=>o.status==='전송완료'?{...o,status:'입고완료'}:o));
+    const rcvdMap={};
+    items.forEach(i=>{rcvdMap[i.name]=i.receivedQty;});
+    const rcvOrders=orders.filter(o=>o.status==='전송완료');
+    const distMap={};
+    rcvOrders.forEach(o=>o.items.forEach(item=>{
+      if(!distMap[item.name]) distMap[item.name]={name:item.name,category:item.category,availQty:rcvdMap[item.name]||0,designers:[]};
+      distMap[item.name].designers.push({designerName:o.name,orderedQty:item.qty,distributedQty:item.qty});
+    }));
+    setDistData(Object.values(distMap)); setRcvStep('dist');
+  }
+  async function handleConfirmDistribution(items) {
+    const flat=[];
+    items.forEach(p=>p.designers.forEach(d=>flat.push({designerName:d.designerName,productName:p.name,category:p.category,orderedQty:d.orderedQty,distributedQty:d.distributedQty})));
+    await apiPost({ action:'confirmDistribution', branch:user.branch, items:flat });
+    setOrders(p=>p.map(o=>o.status==='입고완료'?{...o,status:'분출완료'}:o));
+    setRcvStep('list'); setRcvData(null); setDistData(null);
+    alert('✅ 분출 완료 처리되었습니다.');
+  }
+
+  if(detail) return <OrderDetailScreen order={detail} onBack={()=>setDetail(null)} onApprove={()=>handleApprove(detail.orderId)} onReject={()=>{setRejectModal(detail.orderId);setRejectReason('');}} onRevert={()=>handleRevert(detail.orderId)} onEdit={()=>handleEditOrder(detail)} onCancelOrder={()=>handleCancelOrder(detail.orderId)} />;
+  if(rcvStep==='form'&&rcvData) return <ReceivingForm branch={user.branch} items={rcvData} onBack={()=>setRcvStep('list')} onConfirm={handleConfirmReceiving}/>;
+  if(rcvStep==='dist'&&distData) return <DistributionForm branch={user.branch} items={distData} onBack={()=>setRcvStep('form')} onConfirm={handleConfirmDistribution}/>;
+
+  const activeOrders = orders.filter(o=>o.status!=='취소');
+  const pending=activeOrders.filter(o=>o.status==='대기');
+  const approved=activeOrders.filter(o=>o.status==='승인');
+  const sent=activeOrders.filter(o=>o.status==='전송완료');
+  const received=activeOrders.filter(o=>o.status==='입고완료');
+  const approvedAmt=approved.reduce((s,o)=>s+o.items.reduce((ss,i)=>ss+i.amount,0),0);
+
+  return (
+    <div className="screen">
+      <div className="header">
+        <div className="header-left">
+          <div className="logo-chip" style={{fontSize:11}}>매</div>
+          <div><div className="header-title">매니저 화면</div><div className="header-sub">{user.branch} · {user.name}</div></div>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          <button onClick={load} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18}}>↻</button>
+          <button onClick={onLogout} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13}}>로그아웃</button>
+        </div>
+      </div>
+      <div className="mgr-tabs">
+        <div className={`mgr-tab${tab==='orders'?' active':''}`} onClick={()=>setTab('orders')}>발주관리 {pending.length>0&&<span style={{background:'var(--danger)',color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,marginLeft:4}}>{pending.length}</span>}</div>
+        <div className={`mgr-tab${tab==='myorder'?' active':''}`} onClick={()=>{setTab('myorder');setMgrStep('catalog');setMgrDone(false);}}>내 발주</div>
+        <div className={`mgr-tab${tab==='receive'?' active':''}`} onClick={()=>setTab('receive')}>입고/분출 {(sent.length+received.length)>0&&<span style={{background:'var(--info)',color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,marginLeft:4}}>{sent.length+received.length}</span>}</div>
+      </div>
+      {loading?<Spinner/>:tab==='myorder'?(
+        mgrDone ? (
+          <div className="done-wrap">
+            <div className="done-circle">✓</div>
+            <div className="done-title">발주 완료!</div>
+            <div className="done-sub">매니저 발주가 접수되었습니다</div>
+            <button className="btn-gold" style={{marginTop:24}} onClick={()=>{setMgrDone(false);setMgrStep('catalog');}}>추가 발주하기</button>
+          </div>
+        ) : mgrStep==='cart' ? (
+          <CartScreen user={user} products={products} cart={mgrCart}
+            onCart={(k,v)=>setMgrCart(p=>({...p,[k]:v}))}
+            onBack={()=>setMgrStep('catalog')}
+            onSubmit={handleMgrSubmit}
+            submitting={mgrSubmitting} />
+        ) : (
+          <CatalogScreen user={user} products={products} cart={mgrCart}
+            onCart={(k,v)=>setMgrCart(p=>({...p,[k]:v}))}
+            onGoCart={()=>setMgrStep('cart')}
+            onLogout={()=>{}} />
+        )
+      ):tab==='orders'?(
+        <div className="scrollable">
+          {approved.length>0&&<div style={{padding:'12px 0'}}><button className="btn-gold" onClick={handleSendToHQ} disabled={sending}>{sending?'전송 중...':`✈️ 본사 전송 (승인 ${approved.length}건 · ${approvedAmt.toLocaleString()}원)`}</button></div>}
+          {pending.length>0&&<><div className="section-title">승인 대기 ({pending.length})</div>{pending.map(o=><OrderCard key={o.orderId} order={o} onClick={()=>setDetail(o)}/>)}</>}
+          {approved.length>0&&<><div className="section-title">승인됨 ({approved.length})</div>{approved.map(o=><OrderCard key={o.orderId} order={o} onClick={()=>setDetail(o)}/>)}</>}
+          {sent.length>0&&<><div className="section-title">전송완료 ({sent.length})</div>{sent.map(o=><OrderCard key={o.orderId} order={o} onClick={()=>setDetail(o)}/>)}</>}
+          {orders.filter(o=>['반려','입고완료','분출완료'].includes(o.status)).length>0&&<><div className="section-title">기타</div>{orders.filter(o=>['반려','입고완료','분출완료'].includes(o.status)).map(o=><OrderCard key={o.orderId} order={o} onClick={()=>setDetail(o)}/>)}</>}
+          {orders.length===0&&<div className="empty-state">발주 내역이 없습니다</div>}
+        </div>
+      ):(
+        <div className="scrollable">
+          {sent.length>0&&<div style={{padding:'12px 0'}}><div className="section-title">입고 대기 ({sent.length}건)</div>{sent.map(o=><OrderCard key={o.orderId} order={o} onClick={()=>{}}/>)}<button className="btn-gold" style={{marginTop:12}} onClick={startReceiving}>📦 입고 확인 시작</button></div>}
+          {received.length>0&&<div style={{padding:'12px 0'}}><div className="section-title">분출 대기 ({received.length}건)</div>{received.map(o=><OrderCard key={o.orderId} order={o} onClick={()=>{}}/>)}</div>}
+          {sent.length===0&&received.length===0&&<div className="empty-state">입고/분출 대기 항목이 없습니다</div>}
+        </div>
+      )}
+      {rejectModal&&(
+        <div className="modal-overlay" onClick={()=>setRejectModal(null)}>
+          <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">반려 사유</div>
+            <div className="reject-btns">{REJECT_PRESETS.map(r=><button key={r} className={`reject-reason-btn${rejectReason===r?' sel':''}`} onClick={()=>setRejectReason(r)}>{r}</button>)}</div>
+            <input className="input-field" placeholder="직접 입력..." value={rejectReason} onChange={e=>setRejectReason(e.target.value)} style={{marginBottom:12}}/>
+            <button className="btn-danger" disabled={!rejectReason.trim()} onClick={()=>handleReject(rejectModal,rejectReason)}>반려 처리</button>
+            <button className="btn-ghost" onClick={()=>setRejectModal(null)}>취소</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrderCard({ order, onClick }) {
+  const amt=order.items.reduce((s,i)=>s+i.amount,0);
+  return (
+    <div className="order-card" onClick={onClick}>
+      <div className="order-card-header">
+        <div><div className="order-card-name">{order.name}</div><div className="order-card-meta">{formatDate(order.timestamp)} · {order.items.length}품목{amt>0?` · ${amt.toLocaleString()}원`:''}</div></div>
+        <StatusBadge status={order.status}/>
+      </div>
+      {order.status==='반려'&&order.rejectReason&&<div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>반려: {order.rejectReason}</div>}
+      <div className="order-card-items">
+        {order.items.slice(0,4).map((i,idx)=><span key={idx} className="item-chip">{i.name} {i.qty}개</span>)}
+        {order.items.length>4&&<span className="item-chip">+{order.items.length-4}</span>}
+      </div>
+    </div>
+  );
+}
+
+function OrderDetailScreen({ order, onBack, onApprove, onReject, onRevert, onEdit, onCancelOrder }) {
+  const amt=order.items.reduce((s,i)=>s+i.amount,0);
+  return (
+    <div className="screen">
+      <div className="header">
+        <button className="back-btn" onClick={onBack}>←</button>
+        <div className="header-left"><div><div className="header-title">{order.name} 발주</div><div className="header-sub">{formatDate(order.timestamp)}</div></div></div>
+        <StatusBadge status={order.status}/>
+      </div>
+      <div className="scrollable">
+        {order.items.map((item,i)=>(
+          <div key={i} className="order-detail-item">
+            <div><div style={{fontSize:14,fontWeight:500}}>{item.name}</div><div style={{fontSize:12,color:'var(--text3)'}}>{item.category} · {item.supplier}</div></div>
+            <div style={{textAlign:'right'}}><div style={{fontSize:15,fontWeight:700,color:'var(--gold)'}}>{item.qty}개</div>{item.amount>0&&<div style={{fontSize:11,color:'var(--text3)'}}>{item.amount.toLocaleString()}원</div>}</div>
+          </div>
+        ))}
+        {order.memo&&<div style={{background:'var(--surface2)',borderRadius:10,padding:'12px 14px',marginTop:8,fontSize:13,color:'var(--text2)'}}>메모: {order.memo}</div>}
+        {amt>0&&<div style={{textAlign:'right',padding:'12px 4px',fontSize:14}}>합계: <strong style={{color:'var(--gold)'}}>{amt.toLocaleString()}원</strong></div>}
+      </div>
+      <div className="bottom-bar">
+        {order.status==='대기' && <>
+          <button className="btn-success" onClick={onApprove}>✓ 승인</button>
+          <button className="btn-danger" onClick={onReject}>✕ 반려</button>
+        </>}
+        {order.status==='승인' && (
+          <button className="btn-ghost" onClick={onRevert}>↩ 승인 취소 (대기로)</button>
+        )}
+        {(order.status==='대기'||order.status==='승인') && (
+          <button onClick={onEdit} style={{width:'100%',background:'rgba(91,156,246,0.15)',color:'var(--info)',border:'1.5px solid rgba(91,156,246,0.4)',borderRadius:13,padding:'14px',fontSize:15,fontWeight:600,fontFamily:'inherit',cursor:'pointer',marginTop:8}}>✏️ 매니저 직접 수정</button>
+        )}
+        {(order.status==='대기'||order.status==='반려') && (
+          <button onClick={onCancelOrder} style={{width:'100%',background:'rgba(224,92,92,0.08)',color:'var(--danger)',border:'1.5px solid rgba(224,92,92,0.3)',borderRadius:13,padding:'12px',fontSize:14,fontWeight:600,fontFamily:'inherit',cursor:'pointer',marginTop:8}}>✕ 발주 취소</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReceivingForm({ branch, items, onBack, onConfirm }) {
+  const [data, setData] = useState(items);
+  const [saving, setSaving] = useState(false);
+  const update=(idx,val)=>setData(p=>p.map((d,i)=>i===idx?{...d,receivedQty:Math.max(0,Number(val)||0)}:d));
+  const hasShort=data.some(d=>d.receivedQty<d.orderedQty);
+  return (
+    <div className="screen">
+      <div className="header"><button className="back-btn" onClick={onBack}>←</button><div className="header-left"><div><div className="header-title">입고 확인</div><div className="header-sub">{branch} · {data.length}품목</div></div></div></div>
+      <div className="scrollable">
+        <div style={{background:'rgba(91,156,246,0.1)',border:'1px solid rgba(91,156,246,0.3)',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:13,color:'var(--info)'}}>실제 입고된 수량을 입력해주세요.</div>
+        {data.map((item,idx)=>{
+          const short=item.receivedQty<item.orderedQty;
+          return (
+            <div key={idx} className="rcv-row" style={{borderColor:short?'rgba(224,92,92,0.4)':'var(--border)'}}>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:6}}>{item.name}</div>
+              <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>{item.category} · {item.supplier}</div>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div><div style={{fontSize:11,color:'var(--text3)'}}>발주</div><div style={{fontSize:13,fontWeight:700,color:'var(--text2)'}}>{item.orderedQty}개</div></div>
+                <div style={{flex:1,textAlign:'center',fontSize:18,color:'var(--text3)'}}>→</div>
+                <div><div style={{fontSize:11,color:short?'var(--danger)':'var(--text3)'}}>실입고</div><input className="num-input" type="number" min="0" value={item.receivedQty} onChange={e=>update(idx,e.target.value)} style={{borderColor:short?'rgba(224,92,92,0.5)':undefined}}/></div>
+                {short&&<div style={{fontSize:11,color:'var(--danger)',marginLeft:4}}>-{item.orderedQty-item.receivedQty}</div>}
+              </div>
+            </div>
+          );
+        })}
+        {hasShort&&<div style={{background:'rgba(224,92,92,0.08)',border:'1px solid rgba(224,92,92,0.3)',borderRadius:10,padding:'10px 14px',fontSize:13,color:'var(--danger)'}}>⚠️ 미입고 항목이 있습니다. 추후 재입고 시 다시 확인하세요.</div>}
+      </div>
+      <div className="bottom-bar"><button className="btn-gold" onClick={async()=>{setSaving(true);await onConfirm(data);setSaving(false);}} disabled={saving}>{saving?'저장 중...':'입고 확인 완료 → 분출하기'}</button></div>
+    </div>
+  );
+}
+
+function DistributionForm({ branch, items, onBack, onConfirm }) {
+  const [data, setData] = useState(items);
+  const [saving, setSaving] = useState(false);
+  const update=(pi,di,val)=>setData(p=>p.map((prod,pii)=>pii!==pi?prod:{...prod,designers:prod.designers.map((d,dii)=>dii!==di?d:{...d,distributedQty:Math.max(0,Number(val)||0)})}));
+  return (
+    <div className="screen">
+      <div className="header"><button className="back-btn" onClick={onBack}>←</button><div className="header-left"><div><div className="header-title">분출 처리</div><div className="header-sub">{branch} · {data.length}품목</div></div></div></div>
+      <div className="scrollable">
+        <div style={{background:'rgba(200,164,74,0.08)',border:'1px solid rgba(200,164,74,0.3)',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:13,color:'var(--gold)'}}>각 선생님에게 지급할 수량을 확인/조정해주세요.</div>
+        {data.map((prod,pi)=>{
+          const totalDist=prod.designers.reduce((s,d)=>s+d.distributedQty,0), over=totalDist>prod.availQty;
+          return (
+            <div key={pi} className="dist-section" style={{borderColor:over?'rgba(224,92,92,0.4)':'var(--border)'}}>
+              <div className="dist-product-name">{prod.name}<span style={{fontSize:11,color:over?'var(--danger)':'var(--text3)',marginLeft:8,fontWeight:400}}>입고 {prod.availQty}개 / 분출 {totalDist}개 {over?'⚠️초과':''}</span></div>
+              {prod.designers.map((d,di)=>(
+                <div key={di} className="dist-row">
+                  <div><div className="dist-designer">{d.designerName}</div><div className="dist-ordered">발주 {d.orderedQty}개</div></div>
+                  <input className="num-input" type="number" min="0" value={d.distributedQty} onChange={e=>update(pi,di,e.target.value)}/>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <div className="bottom-bar"><button className="btn-gold" onClick={async()=>{
+        for(const p of data){const t=p.designers.reduce((s,d)=>s+d.distributedQty,0);if(t>p.availQty){alert(`${p.name}: 분출 합계(${t})가 입고수량(${p.availQty})을 초과합니다`);return;}}
+        setSaving(true);await onConfirm(data);setSaving(false);
+      }} disabled={saving}>{saving?'처리 중...':'분출 완료 처리'}</button></div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  월별 리포트 컴포넌트
+// ════════════════════════════════════════════════════
+function MonthlyReport() {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [openBranch, setOpenBranch] = useState(null);
+  const [openDesigner, setOpenDesigner] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiGet({ action: 'orders', year, month })
+      .then(d => { if (d.orders) setOrders(d.orders); else setOrders([]); })
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
+  }, [year, month]);
+
+  function prevMonth() {
+    if (month === 1) { setYear(y => y-1); setMonth(12); }
+    else setMonth(m => m-1);
+    setOpenBranch(null); setOpenDesigner(null);
+  }
+  function nextMonth() {
+    const y2 = month === 12 ? year+1 : year;
+    const m2 = month === 12 ? 1 : month+1;
+    if (y2 > now.getFullYear() || (y2 === now.getFullYear() && m2 > now.getMonth()+1)) return;
+    setYear(y2); setMonth(m2);
+    setOpenBranch(null); setOpenDesigner(null);
+  }
+
+  // 지점별 집계
+  const branchMap = {};
+  BRANCHES.forEach(b => { branchMap[b] = { orders:[], totalQty:0, totalEmp:0, totalHq:0 }; });
+  orders.forEach(o => {
+    if (!branchMap[o.branch]) return;
+    branchMap[o.branch].orders.push(o);
+    branchMap[o.branch].totalQty  += o.items.reduce((s,i)=>s+i.qty,0);
+    branchMap[o.branch].totalEmp  += o.items.reduce((s,i)=>s+i.amount,0);
+    branchMap[o.branch].totalHq   += o.items.reduce((s,i)=>s+(i.hqAmount||0),0);
+  });
+
+  const grandTotalEmp = Object.values(branchMap).reduce((s,b)=>s+b.totalEmp,0);
+  const grandTotalHq  = Object.values(branchMap).reduce((s,b)=>s+b.totalHq,0);
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()+1;
+
+  return (
+    <div className="screen">
+      {/* 월 선택 헤더 */}
+      <div style={{padding:'14px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)'}}>
+        <button onClick={prevMonth} style={{background:'var(--surface3)',border:'none',color:'var(--text)',width:36,height:36,borderRadius:10,fontSize:18,cursor:'pointer'}}>◀</button>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:17,fontWeight:800}}>{year}년 {month}월</div>
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>발주 내역 리포트</div>
+        </div>
+        <button onClick={nextMonth} disabled={isCurrentMonth} style={{background:'var(--surface3)',border:'none',color:isCurrentMonth?'var(--text3)':'var(--text)',width:36,height:36,borderRadius:10,fontSize:18,cursor:isCurrentMonth?'not-allowed':'pointer'}}>▶</button>
+      </div>
+
+      {/* 전체 합계 */}
+      {!loading && grandTotalEmp > 0 && (
+        <div style={{margin:'12px 20px 0',background:'rgba(200,164,74,0.08)',border:'1px solid var(--gold-border)',borderRadius:12,padding:'12px 16px',display:'flex',justifyContent:'space-between'}}>
+          <span style={{fontSize:13,fontWeight:700,color:'var(--gold)'}}>전체 합계</span>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:13,fontWeight:800,color:'var(--gold)'}}>{grandTotalEmp.toLocaleString()}원 <span style={{fontSize:11,fontWeight:400,color:'var(--text3)'}}>직원가</span></div>
+            {grandTotalHq > 0 && <div style={{fontSize:11,color:'var(--info)'}}>{grandTotalHq.toLocaleString()}원 본사가</div>}
+          </div>
+        </div>
+      )}
+
+      <div className="scrollable" style={{paddingTop:12}}>
+        {loading && <Spinner />}
+        {!loading && orders.length === 0 && (
+          <div className="empty-state">{year}년 {month}월 발주 내역이 없습니다</div>
+        )}
+        {!loading && BRANCHES.map(b => {
+          const bd = branchMap[b];
+          if (!bd.orders.length) return (
+            <div key={b} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'13px 16px',marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span style={{fontSize:14,fontWeight:700}}>{b}</span>
+              <span style={{fontSize:12,color:'var(--text3)'}}>발주 없음</span>
+            </div>
+          );
+
+          // 디자이너별 집계
+          const designerMap = {};
+          bd.orders.forEach(o => {
+            if (!designerMap[o.name]) designerMap[o.name] = { name:o.name, orders:[], totalQty:0, totalEmp:0, totalHq:0 };
+            designerMap[o.name].orders.push(o);
+            designerMap[o.name].totalQty += o.items.reduce((s,i)=>s+i.qty,0);
+            designerMap[o.name].totalEmp += o.items.reduce((s,i)=>s+i.amount,0);
+            designerMap[o.name].totalHq  += o.items.reduce((s,i)=>s+(i.hqAmount||0),0);
+          });
+          const designers = Object.values(designerMap);
+          const isBOpen = openBranch === b;
+
+          return (
+            <div key={b} style={{marginBottom:8}}>
+              {/* 지점 행 */}
+              <div onClick={() => { setOpenBranch(isBOpen?null:b); setOpenDesigner(null); }}
+                style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:isBOpen?'12px 12px 0 0':'12px',padding:'13px 16px',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',userSelect:'none'}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:34,height:34,background:'var(--surface3)',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--text2)'}}>
+                    {b.replace('점','')}
+                  </div>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700}}>{b}</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>{designers.length}명 · {bd.totalQty}개</div>
+                  </div>
+                </div>
+                <div style={{textAlign:'right',display:'flex',alignItems:'center',gap:10}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:'var(--gold)'}}>{bd.totalEmp.toLocaleString()}원</div>
+                    {bd.totalHq > 0 && <div style={{fontSize:11,color:'var(--info)'}}>{bd.totalHq.toLocaleString()}원</div>}
+                  </div>
+                  <span style={{color:'var(--text3)',fontSize:16,transition:'transform .2s',display:'inline-block',transform:isBOpen?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                </div>
+              </div>
+
+              {/* 디자이너 목록 */}
+              {isBOpen && (
+                <div style={{border:'1px solid var(--border)',borderTop:'none',borderRadius:'0 0 12px 12px',overflow:'hidden'}}>
+                  {designers.map((d, di) => {
+                    const isDOpen = openDesigner === `${b}-${d.name}`;
+                    return (
+                      <div key={d.name}>
+                        {/* 디자이너 행 */}
+                        <div onClick={() => setOpenDesigner(isDOpen ? null : `${b}-${d.name}`)}
+                          style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 16px',background:di%2===0?'var(--surface)':'var(--surface2)',borderTop:'1px solid var(--border)',cursor:'pointer',userSelect:'none'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10}}>
+                            <div style={{width:28,height:28,background:'var(--gold)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,color:'#000',flexShrink:0}}>
+                              {d.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:700}}>{d.name}</div>
+                              <div style={{fontSize:11,color:'var(--text3)'}}>{d.orders.reduce((s,o)=>s+o.items.length,0)}품목 · {d.totalQty}개</div>
+                            </div>
+                          </div>
+                          <div style={{textAlign:'right',display:'flex',alignItems:'center',gap:8}}>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:800,color:'var(--gold)'}}>{d.totalEmp.toLocaleString()}원</div>
+                              {d.totalHq > 0 && <div style={{fontSize:11,color:'var(--info)'}}>{d.totalHq.toLocaleString()}원</div>}
+                            </div>
+                            <span style={{color:'var(--text3)',fontSize:14,transition:'transform .2s',display:'inline-block',transform:isDOpen?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                          </div>
+                        </div>
+
+                        {/* 디자이너 품목 상세 */}
+                        {isDOpen && d.orders.map(o => (
+                          <div key={o.orderId} style={{background:'rgba(200,164,74,0.04)',borderTop:'1px solid var(--border)',padding:'8px 16px 8px 54px'}}>
+                            <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>{formatDate(o.timestamp)} · <StatusBadge status={o.status}/></div>
+                            {o.items.map((item,ii) => (
+                              <div key={ii} style={{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:'1px solid rgba(255,255,255,0.04)',fontSize:12}}>
+                                <div>
+                                  <span style={{fontWeight:500}}>{item.name}</span>
+                                  <span style={{color:'var(--text3)',marginLeft:6}}>{item.category}</span>
+                                </div>
+                                <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
+                                  <span style={{fontWeight:700,color:'var(--gold)'}}>{item.qty}개</span>
+                                  {item.amount > 0 && <span style={{color:'var(--text3)',fontSize:11,marginLeft:6}}>{item.amount.toLocaleString()}원</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  지점 상세보기 모달 (아코디언)
+// ════════════════════════════════════════════════════
+function BranchDetailModal({ branch, orders, branchProds, branchTotalAmt, branchTotalQty, onClose }) {
+  const [openDesigner, setOpenDesigner] = useState(null); // orderId
+  const [openTotal, setOpenTotal] = useState(false);
+
+  function exportBranchExcel() {
+    const wb = XLSX.utils.book_new();
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+
+    // ① 디자이너별 개별 시트 (날짜 포함)
+    // 같은 이름 디자이너의 여러 발주를 하나의 시트에 합치기
+    const designerMap = {};
+    orders.forEach(o => {
+      const dName = o.name;
+      if (!designerMap[dName]) designerMap[dName] = [];
+      designerMap[dName].push(o);
+    });
+
+    Object.entries(designerMap).forEach(([dName, dOrders]) => {
+      const rows = [['발주날짜', '제품명', '카테고리', '수량', '직원가', '금액']];
+      let totalQty = 0, totalAmt = 0;
+      dOrders.forEach(o => {
+        const dateLabel = formatDate(o.timestamp).split(' ')[0]; // 날짜 부분만
+        o.items.forEach(item => {
+          rows.push([
+            dateLabel,
+            item.name,
+            item.category,
+            item.qty,
+            item.employeePrice > 0 ? item.employeePrice : '',
+            item.amount > 0 ? item.amount : ''
+          ]);
+          totalQty += item.qty;
+          totalAmt += item.amount || 0;
+        });
+        rows.push(['','','','','','']); // 발주건 사이 빈줄
+      });
+      // 디자이너 합계
+      rows.push(['[합계]', '', '', totalQty, '', totalAmt > 0 ? totalAmt : '']);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:10},{wch:22},{wch:14},{wch:6},{wch:8},{wch:10}];
+      // 시트명은 디자이너 이름 (31자 제한)
+      XLSX.utils.book_append_sheet(wb, ws, dName.slice(0,31));
+    });
+
+    // ② 공급사별 합계 시트
+    const supMap = {};
+    orders.forEach(o => {
+      o.items.forEach(item => {
+        const s = item.supplier || item.category || '기타';
+        if (!supMap[s]) supMap[s] = {};
+        if (!supMap[s][item.name]) supMap[s][item.name] = { name:item.name, category:item.category, qty:0, empAmt:0, hqAmt:0 };
+        supMap[s][item.name].qty    += item.qty;
+        supMap[s][item.name].empAmt += item.amount || 0;
+        supMap[s][item.name].hqAmt  += item.hqAmount || 0;
+      });
+    });
+    const supRows = [['공급사', '제품명', '카테고리', '총수량', '직원가합계', '본사가합계']];
+    Object.entries(supMap).forEach(([sup, prods]) => {
+      Object.values(prods).forEach(p => {
+        supRows.push([sup, p.name, p.category, p.qty,
+          p.empAmt > 0 ? p.empAmt : '',
+          p.hqAmt > 0 ? p.hqAmt : '']);
+      });
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(supRows);
+    ws2['!cols'] = [{wch:10},{wch:22},{wch:14},{wch:8},{wch:10},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws2, '공급사별 합계');
+
+    // ③ 지점 전체 합계 시트
+    const totalRows = [['제품명', '카테고리', '총수량', '직원가합계']];
+    branchProds.forEach(p => {
+      totalRows.push([p.name, p.category, p.total, p.amt > 0 ? p.amt : '']);
+    });
+    if (branchTotalAmt > 0) totalRows.push(['', '[합계]', branchTotalQty, branchTotalAmt]);
+    const ws3 = XLSX.utils.aoa_to_sheet(totalRows);
+    ws3['!cols'] = [{wch:22},{wch:14},{wch:8},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws3, '지점합계');
+
+    XLSX.writeFile(wb, `${branch}_발주서_${dateStr}.xlsx`);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" style={{maxHeight:'90vh',overflowY:'auto',padding:'20px 0 40px'}} onClick={e => e.stopPropagation()}>
+
+        {/* 헤더 */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',marginBottom:16}}>
+          <div>
+            <div style={{fontSize:19,fontWeight:800}}>{branch}</div>
+            <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>발주 상세 내역</div>
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <button onClick={exportBranchExcel} style={{background:'var(--gold)',border:'none',color:'#000',fontSize:12,fontWeight:700,cursor:'pointer',padding:'7px 12px',borderRadius:8,fontFamily:'inherit'}}>📊 엑셀</button>
+            <button onClick={onClose} style={{background:'var(--surface3)',border:'none',color:'var(--text2)',fontSize:14,cursor:'pointer',width:32,height:32,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+          </div>
+        </div>
+
+        {/* 디자이너별 아코디언 */}
+        <div style={{padding:'0 20px'}}>
+          {orders.length === 0 && <div className="empty-state">발주 내역이 없습니다</div>}
+          {orders.map(o => {
+            const amt = o.items.reduce((s,i) => s+i.amount, 0);
+            const isOpen = openDesigner === o.orderId;
+            return (
+              <div key={o.orderId} style={{marginBottom:8,border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+                {/* 디자이너 행 — 클릭으로 펼치기 */}
+                <div
+                  onClick={() => setOpenDesigner(isOpen ? null : o.orderId)}
+                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 14px',background:'var(--surface2)',cursor:'pointer',userSelect:'none'}}
+                >
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{width:34,height:34,background:'var(--gold)',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#000',flexShrink:0}}>
+                      {o.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div style={{fontSize:15,fontWeight:700}}>{o.name}</div>
+                      <div style={{fontSize:11,color:'var(--text3)'}}>{o.items.length}품목 · {formatDate(o.timestamp)}</div>
+                    </div>
+                  </div>
+                  <div style={{textAlign:'right',display:'flex',alignItems:'center',gap:10}}>
+                    <div>
+                      <StatusBadge status={o.status}/>
+                      {amt > 0 && <div style={{fontSize:13,color:'var(--gold)',fontWeight:800,marginTop:4}}>{amt.toLocaleString()}원</div>}
+                    </div>
+                    <span style={{color:'var(--text3)',fontSize:16,transition:'transform .2s',display:'inline-block',transform:isOpen?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                  </div>
+                </div>
+                {/* 품목 목록 — 펼쳐질 때만 */}
+                {isOpen && (
+                  <div>
+                    {o.items.map((item,i) => (
+                      <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:i%2===0?'var(--surface)':'var(--surface2)',borderTop:'1px solid var(--border)'}}>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:600}}>{item.name}</div>
+                          <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>{item.category}</div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
+                          <div style={{fontSize:14,fontWeight:800,color:'var(--gold)'}}>{item.qty}개</div>
+                          {item.amount > 0 && <div style={{fontSize:11,color:'var(--text3)'}}>직원가 {item.amount.toLocaleString()}원</div>}
+                          {item.hqAmount > 0 && item.hqAmount !== item.amount && <div style={{fontSize:11,color:'var(--info)'}}>본사가 {item.hqAmount.toLocaleString()}원</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* 지점 전체 합계 아코디언 */}
+          {branchProds.length > 0 && (
+            <div style={{marginTop:8,border:'1.5px solid var(--gold-border)',borderRadius:12,overflow:'hidden'}}>
+              {/* 합계 행 — 클릭으로 펼치기 */}
+              <div
+                onClick={() => setOpenTotal(!openTotal)}
+                style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 14px',background:'rgba(200,164,74,0.12)',cursor:'pointer',userSelect:'none'}}
+              >
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:34,height:34,background:'rgba(200,164,74,0.2)',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>📦</div>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:800,color:'var(--gold)'}}>{branch} 전체 합계</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>{branchProds.length}품목 · {branchTotalQty}개</div>
+                  </div>
+                </div>
+                <div style={{textAlign:'right',display:'flex',alignItems:'center',gap:10}}>
+                  {branchTotalAmt > 0 && <div style={{fontSize:14,fontWeight:800,color:'var(--gold)'}}>{branchTotalAmt.toLocaleString()}원</div>}
+                  <span style={{color:'var(--gold)',fontSize:16,transition:'transform .2s',display:'inline-block',transform:openTotal?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                </div>
+              </div>
+              {/* 전체 품목 목록 */}
+              {openTotal && branchProds.map((p,i) => (
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:i%2===0?'var(--surface)':'var(--surface2)',borderTop:'1px solid var(--border)'}}>
+                  <div>
+                    <span style={{fontSize:13,fontWeight:600}}>{p.name}</span>
+                    <span style={{fontSize:11,color:'var(--text3)',marginLeft:6}}>{p.category}</span>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <span style={{fontSize:14,fontWeight:800,color:'var(--gold)'}}>{p.total}개</span>
+                    {p.amt > 0 && <span style={{fontSize:11,color:'var(--text3)',marginLeft:8}}>{p.amt.toLocaleString()}원</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  본사 앱 (이승섭 이사)
+// ════════════════════════════════════════════════════
+function HQApp({ user, onLogout }) {
+  const [tab, setTab] = useState('users');
+  const [users, setUsers] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [editModal, setEditModal] = useState(null);
+  const [editBranch, setEditBranch] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [branchDetail, setBranchDetail] = useState(null); // 지점 상세보기
+
+  function loadUsers() {
+    setLoading(true);
+    apiGet({ action:'users' }).then(d=>{if(d.users) setUsers(d.users);}).catch(()=>{}).finally(()=>setLoading(false));
+  }
+  function loadOrders() {
+    setLoading(true);
+    apiGet({ action:'orders' }).then(d=>{if(d.orders) setOrders(d.orders);}).catch(()=>{}).finally(()=>setLoading(false));
+  }
+  useEffect(()=>{loadUsers();},[]);
+  useEffect(()=>{ if(tab==='orders') loadOrders(); else if(tab==='users') loadUsers(); },[tab]);
+
+  async function handleApprove(userId) {
+    const res = await apiPost({ action:'approveUser', userId });
+    if(res.success) setUsers(p=>p.map(u=>u.userId===userId?{...u,status:'승인'}:u));
+  }
+  async function handleReject(userId, reason) {
+    const res = await apiPost({ action:'rejectUser', userId, reason });
+    if(res.success) { setUsers(p=>p.map(u=>u.userId===userId?{...u,status:'반려',rejectReason:reason}:u)); setRejectModal(null); }
+  }
+  async function handleDeactivate(userId) {
+    if(!window.confirm('이 계정을 비활성화 하시겠습니까?')) return;
+    const res = await apiPost({ action:'deactivateUser', userId });
+    if(res.success) setUsers(p=>p.map(u=>u.userId===userId?{...u,status:'비활성'}:u));
+  }
+  async function handleUpdate() {
+    if(!editModal) return;
+    const res = await apiPost({ action:'updateUser', userId:editModal.userId, branch:editBranch, role:editRole });
+    if(res.success) { setUsers(p=>p.map(u=>u.userId===editModal.userId?{...u,branch:editBranch,role:editRole}:u)); setEditModal(null); alert('✅ 수정 완료'); }
+  }
+
+  function exportExcel() {
+    // 승인 이상 단계 모두 포함
+    const targetOrders = orders.filter(o => ['승인','전송완료','입고완료','분출완료'].includes(o.status));
+    if (!targetOrders.length) { alert('승인된 발주가 없습니다.'); return; }
+    const wb = XLSX.utils.book_new();
+    const supMap = {};
+    targetOrders.forEach(o => {
+      o.items.forEach(item => {
+        const s = item.supplier || '기타';
+        if (!supMap[s]) supMap[s] = {};
+        if (!supMap[s][item.name]) supMap[s][item.name] = {
+          name: item.name, category: item.category,
+          employeePrice: item.employeePrice || 0,
+          hqPrice: item.hqPrice || 0,
+          total: 0, byBranch: {}
+        };
+        supMap[s][item.name].total += item.qty;
+        supMap[s][item.name].byBranch[o.branch] = (supMap[s][item.name].byBranch[o.branch] || 0) + item.qty;
+      });
+    });
+    Object.keys(supMap).forEach(sup => {
+      const prods = Object.values(supMap[sup]);
+      // 헤더: 제품명, 카테고리, 직원가, 지점별 수량, 합계
+      const rows = [['제품명','카테고리','직원가','본사가', ...BRANCHES, '합계']];
+      prods.forEach(p => rows.push([
+        p.name, p.category,
+        p.employeePrice > 0 ? p.employeePrice : '',
+        p.hqPrice > 0 ? p.hqPrice : '',
+        ...BRANCHES.map(b => p.byBranch[b] || 0),
+        p.total
+      ]));
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:22},{wch:14},{wch:8},...BRANCHES.map(()=>({wch:7})),{wch:6}];
+      // 헤더 행 스타일
+      XLSX.utils.book_append_sheet(wb, ws, sup.slice(0,31));
+    });
+    // 전체 합계 시트 추가
+    const allMap = {};
+    targetOrders.forEach(o => o.items.forEach(item => {
+      if (!allMap[item.name]) allMap[item.name] = {
+        name: item.name, category: item.category, supplier: item.supplier||'',
+        employeePrice: item.employeePrice||0, hqPrice: item.hqPrice||0, total: 0, byBranch: {}
+      };
+      allMap[item.name].total += item.qty;
+      allMap[item.name].byBranch[o.branch] = (allMap[item.name].byBranch[o.branch]||0) + item.qty;
+    }));
+    const summaryRows = [['제품명','카테고리','공급사','직원가','본사가',...BRANCHES,'합계']];
+    Object.values(allMap).sort((a,b) => a.category.localeCompare(b.category))
+      .forEach(p => summaryRows.push([
+        p.name, p.category, p.supplier,
+        p.employeePrice > 0 ? p.employeePrice : '',
+        p.hqPrice > 0 ? p.hqPrice : '',
+        ...BRANCHES.map(b => p.byBranch[b]||0), p.total
+      ]));
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+    summaryWs['!cols'] = [{wch:22},{wch:14},{wch:8},{wch:8},...BRANCHES.map(()=>({wch:7})),{wch:6}];
+    XLSX.utils.book_append_sheet(wb, summaryWs, '전체합계');
+    const d = new Date();
+    XLSX.writeFile(wb, `430헤어_발주서_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`);
+  }
+
+  const pending=users.filter(u=>u.status==='대기');
+  const approved=users.filter(u=>u.status==='승인');
+  const others=users.filter(u=>!['대기','승인'].includes(u.status));
+
+  return (
+    <div className="screen">
+      <div className="header">
+        <div className="header-left">
+          <div className="logo-chip" style={{fontSize:11}}>본사</div>
+          <div><div className="header-title">이승섭 이사</div><div className="header-sub">전체 관리</div></div>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {tab==='orders'&&<button className="export-btn" onClick={exportExcel}>엑셀</button>}
+          <button onClick={()=>{if(tab==='users') loadUsers(); else loadOrders();}} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18}}>↻</button>
+          <button onClick={onLogout} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13}}>로그아웃</button>
+        </div>
+      </div>
+      <div className="mgr-tabs">
+        <div className={`mgr-tab${tab==='users'?' active':''}`} onClick={()=>setTab('users')}>
+          사용자 관리 {pending.length>0&&<span style={{background:'var(--danger)',color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,marginLeft:4}}>{pending.length}</span>}
+        </div>
+        <div className={`mgr-tab${tab==='orders'?' active':''}`} onClick={()=>setTab('orders')}>발주 현황</div>
+        <div className={`mgr-tab${tab==='costs'?' active':''}`} onClick={()=>setTab('costs')}>금액내역</div>
+        <div className={`mgr-tab${tab==='monthly'?' active':''}`} onClick={()=>setTab('monthly')}>월별리포트</div>
+      </div>
+      {loading?<Spinner/>:tab==='users'?(
+        <div className="scrollable">
+          {pending.length>0&&(
+            <>
+              <div className="section-title">승인 대기 ({pending.length})</div>
+              {pending.map(u=>(
+                <div key={u.userId} className="user-card" style={{borderColor:'rgba(200,164,74,0.4)'}}>
+                  <div className="user-card-header">
+                    <div><div className="user-name">{u.name}</div><div className="user-meta">{u.branch} · {u.role}</div><div className="user-id">ID: {u.userId}</div></div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>{formatDate(u.joinedAt)}</div>
+                  </div>
+                  <div style={{display:'flex',gap:8,marginTop:8}}>
+                    <button onClick={()=>handleApprove(u.userId)} style={{flex:1,background:'rgba(82,183,136,.15)',color:'var(--success)',border:'1.5px solid rgba(82,183,136,.4)',borderRadius:10,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>✓ 승인</button>
+                    <button onClick={()=>{setRejectModal(u.userId);setRejectReason('');}} style={{flex:1,background:'rgba(224,92,92,.15)',color:'var(--danger)',border:'1.5px solid rgba(224,92,92,.4)',borderRadius:10,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>✕ 반려</button>
+                    <button onClick={()=>{setEditModal(u);setEditBranch(u.branch);setEditRole(u.role);}} style={{background:'var(--surface3)',color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:10,padding:'10px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>수정</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {approved.length>0&&(
+            <>
+              <div className="section-title">승인된 사용자 ({approved.length})</div>
+              {approved.map(u=>(
+                <div key={u.userId} className="user-card">
+                  <div className="user-card-header">
+                    <div><div className="user-name">{u.name}</div><div className="user-meta">{u.branch} · {u.role}</div><div className="user-id">ID: {u.userId}</div></div>
+                    <StatusBadge status={u.status}/>
+                  </div>
+                  <div style={{display:'flex',gap:8,marginTop:8}}>
+                    <button onClick={()=>{setEditModal(u);setEditBranch(u.branch);setEditRole(u.role);}} style={{flex:1,background:'var(--surface3)',color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:10,padding:'9px',fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>지점/역할 수정</button>
+                    <button onClick={()=>handleDeactivate(u.userId)} style={{background:'var(--surface3)',color:'var(--text3)',border:'1.5px solid var(--border)',borderRadius:10,padding:'9px 14px',fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>비활성</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {others.length>0&&(
+            <>
+              <div className="section-title">기타 ({others.length})</div>
+              {others.map(u=>(
+                <div key={u.userId} className="user-card" style={{opacity:.6}}>
+                  <div className="user-card-header">
+                    <div><div className="user-name">{u.name}</div><div className="user-meta">{u.branch} · {u.role}</div><div className="user-id">ID: {u.userId}</div></div>
+                    <StatusBadge status={u.status}/>
+                  </div>
+                  {u.status==='반려'&&u.rejectReason&&<div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>반려: {u.rejectReason}</div>}
+                  {u.status!=='승인'&&<button onClick={()=>handleApprove(u.userId)} style={{marginTop:8,width:'100%',background:'var(--surface3)',color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:10,padding:'9px',fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>재승인</button>}
+                </div>
+              ))}
+            </>
+          )}
+          {users.length===0&&<div className="empty-state">사용자가 없습니다</div>}
+        </div>
+      ):tab==='orders'?(
+        <div className="scrollable">
+          {BRANCHES.map(b=>{
+            const bo=orders.filter(o=>o.branch===b);
+            const stats={대기:0,승인:0,전송완료:0,입고완료:0,분출완료:0,반려:0};
+            bo.forEach(o=>{if(stats[o.status]!==undefined) stats[o.status]++;});
+            const hasActive = bo.filter(o=>o.status!=='반려').length > 0;
+            return (
+              <div key={b} className="branch-status-card"
+                style={{cursor: hasActive ? 'pointer' : 'default'}}
+                onClick={() => hasActive && setBranchDetail(b)}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700}}>{b}</div>
+                    <div className="stat-chips">
+                      {stats.대기>0&&<span className="stat-chip" style={{background:'rgba(153,153,153,.15)',color:'#aaa'}}>대기 {stats.대기}</span>}
+                      {stats.승인>0&&<span className="stat-chip" style={{background:'rgba(82,183,136,.15)',color:'var(--success)'}}>승인 {stats.승인}</span>}
+                      {stats.전송완료>0&&<span className="stat-chip" style={{background:'rgba(91,156,246,.15)',color:'var(--info)'}}>전송 {stats.전송완료}</span>}
+                      {stats.입고완료>0&&<span className="stat-chip" style={{background:'rgba(167,119,219,.15)',color:'#b794f4'}}>입고 {stats.입고완료}</span>}
+                      {stats.분출완료>0&&<span className="stat-chip" style={{background:'var(--gold-dim)',color:'var(--gold)'}}>완료 {stats.분출완료}</span>}
+                      {bo.length===0&&<span style={{fontSize:12,color:'var(--text3)'}}>발주 없음</span>}
+                    </div>
+                  </div>
+                  {hasActive && <span style={{color:'var(--text3)',fontSize:16}}>›</span>}
+                </div>
+              </div>
+            );
+          })}
+          {orders.filter(o=>['승인','전송완료','입고완료','분출완료'].includes(o.status)).length>0&&(
+            <div style={{marginTop:12}}>
+              <button className="btn-gold" onClick={exportExcel}>📊 공급사별 발주서 엑셀 다운로드</button>
+              <div style={{fontSize:12,color:'var(--text3)',textAlign:'center',marginTop:6}}>승인 이상 전체 · 공급사별 시트 + 전체합계 시트</div>
+            </div>
+          )}
+        </div>
+      ):tab==='costs'?(
+        // 금액내역 탭
+        <div className="scrollable">
+          <div style={{fontSize:13,color:'var(--text3)',paddingBottom:12}}>지점별 · 선생님별 금액 내역 (직원가 / 본사가)</div>
+          {BRANCHES.map(b=>{
+            const dc={};
+            orders.filter(o=>o.branch===b&&['전송완료','입고완료','분출완료'].includes(o.status))
+              .forEach(o=>{dc[o.name]=(dc[o.name]||0)+o.items.reduce((s,i)=>s+i.amount,0);});
+            if(!Object.keys(dc).length) return null;
+            const total=Object.values(dc).reduce((s,v)=>s+v,0);
+            return (
+              <div key={b} className="summary-card">
+                <div style={{fontSize:14,fontWeight:700,color:'var(--gold)',marginBottom:8,display:'flex',justifyContent:'space-between'}}><span>{b}</span><span>{total.toLocaleString()}원</span></div>
+                {Object.entries(dc).map(([name,amt])=>(
+                  <div key={name} className="summary-row">
+                <span style={{color:'var(--text)',fontWeight:500}}>{name}</span>
+                <div style={{textAlign:'right'}}>
+                  <div style={{color:'var(--gold)',fontWeight:700,fontSize:13}}>{amt.toLocaleString()}원</div>
+                  <div style={{color:'var(--info)',fontSize:11}}>본사가: {(orders.filter(o=>o.branch===b&&['전송완료','입고완료','분출완료'].includes(o.status)&&o.name===name).reduce((s,o)=>s+o.items.reduce((ss,i)=>ss+(i.hqAmount||0),0),0)).toLocaleString()}원</div>
+                </div>
+              </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      ) : tab==='monthly' ? (
+        <MonthlyReport />
+      ) : null}
+
+      {/* 반려 모달 */}
+      {rejectModal&&(
+        <div className="modal-overlay" onClick={()=>setRejectModal(null)}>
+          <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">반려 사유</div>
+            <div className="reject-btns">{USER_REJECT_PRESETS.map(r=><button key={r} className={`reject-reason-btn${rejectReason===r?' sel':''}`} onClick={()=>setRejectReason(r)}>{r}</button>)}</div>
+            <input className="input-field" placeholder="직접 입력..." value={rejectReason} onChange={e=>setRejectReason(e.target.value)} style={{marginBottom:12}}/>
+            <button className="btn-danger" disabled={!rejectReason.trim()} onClick={()=>handleReject(rejectModal,rejectReason)}>반려 처리</button>
+            <button className="btn-ghost" onClick={()=>setRejectModal(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* 수정 모달 */}
+      {editModal&&(
+        <div className="modal-overlay" onClick={()=>setEditModal(null)}>
+          <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">{editModal.name} 정보 수정</div>
+            <div style={{marginBottom:14}}>
+              <div className="section-label">지점 변경</div>
+              <div className="branch-grid">{BRANCHES.map(b=><button key={b} className={`branch-btn${editBranch===b?' sel':''}`} onClick={()=>setEditBranch(b)}>{b}</button>)}</div>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div className="section-label">역할 변경</div>
+              <div className="role-grid">{['디자이너','매니저'].map(r=><button key={r} className={`role-btn${editRole===r?' sel':''}`} onClick={()=>setEditRole(r)}>{r}</button>)}</div>
+            </div>
+            <button className="btn-gold" onClick={handleUpdate}>수정 완료</button>
+            <button className="btn-ghost" onClick={()=>setEditModal(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* 지점 상세보기 모달 */}
+      {branchDetail && (()=> {
+        const bOrders = orders.filter(o => o.branch === branchDetail && o.status !== '반려');
+        const pMap = {};
+        bOrders.forEach(o => o.items.forEach(item => {
+          if (!pMap[item.name]) pMap[item.name] = {name:item.name, category:item.category, total:0, amt:0};
+          pMap[item.name].total += item.qty;
+          pMap[item.name].amt += item.amount;
+        }));
+        const branchProds = Object.values(pMap).sort((a,b) => a.category.localeCompare(b.category));
+        const branchTotalAmt = branchProds.reduce((s,p) => s+p.amt, 0);
+        const branchTotalQty = branchProds.reduce((s,p) => s+p.total, 0);
+        return (
+          <BranchDetailModal
+            branch={branchDetail}
+            orders={bOrders}
+            branchProds={branchProds}
+            branchTotalAmt={branchTotalAmt}
+            branchTotalQty={branchTotalQty}
+            onClose={() => setBranchDetail(null)}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════
+//  앱 루트
+// ════════════════════════════════════════════════════
+function App() {
+  const [user, setUser] = useState(null);
+
+  if (!user) return <AuthScreen onLogin={setUser} />;
+  if (user.role === '본사') return <HQApp user={user} onLogout={() => setUser(null)} />;
+  if (user.role === '매니저') return <ManagerApp user={user} onLogout={() => setUser(null)} />;
+  return <DesignerApp user={user} onLogout={() => setUser(null)} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
