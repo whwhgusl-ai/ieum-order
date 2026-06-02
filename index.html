@@ -429,7 +429,7 @@ function CatalogScreen({ user, products, cart, onCart, onGoCart, onLogout, myOrd
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {onHistory && <button onClick={onHistory} style={{background:'var(--gold-dim)',border:'1.5px solid var(--gold-border)',color:'var(--gold)',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>📋 내역</button>}
-          {hasCompleted && onReturn && <button onClick={onReturn} style={{background:'rgba(224,92,92,0.15)',border:'1.5px solid rgba(224,92,92,0.4)',color:'var(--danger)',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>반품</button>}
+          {onReturn && <button onClick={onReturn} style={{background:'rgba(224,92,92,0.15)',border:'1.5px solid rgba(224,92,92,0.4)',color:'var(--danger)',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>반품</button>}
           <button onClick={onLogout} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13,flexShrink:0}}>로그아웃</button>
         </div>
       </div>
