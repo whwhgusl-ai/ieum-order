@@ -2345,7 +2345,7 @@ function MonthlyReport() {
           color: '#000',
           flexShrink: 0
         }
-      }, d.name.charAt(0)), React.createElement("div", null, React.createElement("div", {
+      }, String(d.name || '?').charAt(0)), React.createElement("div", null, React.createElement("div", {
         style: {
           fontSize: 13,
           fontWeight: 700
@@ -2998,7 +2998,7 @@ function BranchDetailModal({
         color: '#000',
         flexShrink: 0
       }
-    }, o.name.charAt(0)), React.createElement("div", null, React.createElement("div", {
+    }, String(o.name || '?').charAt(0)), React.createElement("div", null, React.createElement("div", {
       style: {
         fontSize: 15,
         fontWeight: 700
