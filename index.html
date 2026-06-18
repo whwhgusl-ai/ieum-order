@@ -1594,7 +1594,8 @@ function ManagerApp({
     })),
     onGoCart: () => setMgrStep('cart'),
     onLogout: () => {},
-    allowNegative: true
+    allowNegative: true,
+    isEditing: !!editingOrderId
   }) : tab === 'orders' ? React.createElement("div", {
     className: "scrollable"
   }, approved.length > 0 && React.createElement("div", {
@@ -2841,8 +2842,11 @@ function BranchDetailModal({
   orders,
   branchProds,
   branchTotalAmt,
+  branchTotalHq = 0,
   branchTotalQty,
-  onClose
+  onClose,
+  onEditOrder,
+  onCancelOrder
 }) {
   const [openDesigner, setOpenDesigner] = useState(null);
   const [openTotal, setOpenTotal] = useState(false);
@@ -3094,7 +3098,16 @@ function BranchDetailModal({
         fontSize: 11,
         color: 'var(--info)'
       }
-    }, "본사가 ", item.hqAmount.toLocaleString(), "원"))))));
+    }, "본사가 ", item.hqAmount.toLocaleString(), "원")))),
+    (onEditOrder || onCancelOrder) && ['대기','승인'].includes(o.status) && React.createElement("div", {
+      style: { display: 'flex', gap: 8, padding: '10px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }
+    }, onEditOrder && React.createElement("button", {
+      onClick: (e) => { e.stopPropagation(); onEditOrder(o); },
+      style: { flex: 1, background: 'rgba(91,156,246,0.15)', color: 'var(--info)', border: '1.5px solid rgba(91,156,246,0.4)', borderRadius: 9, padding: '9px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+    }, "✏️ 수정"), onCancelOrder && React.createElement("button", {
+      onClick: (e) => { e.stopPropagation(); onCancelOrder(o.orderId); },
+      style: { flex: 1, background: 'rgba(224,92,92,0.1)', color: 'var(--danger)', border: '1.5px solid rgba(224,92,92,0.3)', borderRadius: 9, padding: '9px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+    }, "✕ 취소"))));
   }), branchProds.length > 0 && React.createElement("div", {
     style: {
       marginTop: 8,
@@ -3217,6 +3230,11 @@ function HQApp({
   const [editBranch, setEditBranch] = useState('');
   const [editRole, setEditRole] = useState('');
   const [branchDetail, setBranchDetail] = useState(null);
+  const [hqEditOrder, setHqEditOrder] = useState(null);
+  const [hqProducts, setHqProducts] = useState([]);
+  const [hqCart, setHqCart] = useState({});
+  const [hqEditStep, setHqEditStep] = useState('catalog');
+  const [hqEditSubmitting, setHqEditSubmitting] = useState(false);
   const [hqReturns, setHqReturns] = useState([]);
   const hqPendingReturns = hqReturns.filter(r => r.status === '대기');
   function loadHqReturns() {
@@ -3278,10 +3296,45 @@ function HQApp({
   }
   useEffect(() => {
     loadUsers();
+    apiGet({ action: 'products' }).then(d => { if (d.products) setHqProducts(d.products); }).catch(() => {});
   }, []);
   useEffect(() => {
     if (tab === 'orders') loadOrders();else if (tab === 'users') loadUsers();
   }, [tab]);
+  function handleHqEditOrder(order) {
+    const newCart = {};
+    order.items.forEach(item => { newCart[item.name] = item.qty; });
+    setHqCart(newCart);
+    setHqEditOrder(order);
+    setHqEditStep('catalog');
+  }
+  async function handleHqEditSubmit(memo) {
+    setHqEditSubmitting(true);
+    const items = hqProducts.filter(p => (hqCart[p.name] || 0) > 0).map(p => ({
+      ...p,
+      qty: hqCart[p.name],
+      amount: hqCart[p.name] * (p.employeePrice || 0)
+    }));
+    try {
+      await apiPost({ action: 'cancelOrder', orderId: hqEditOrder.orderId });
+      await apiPostNoRead({
+        action: 'submitOrder',
+        branch: hqEditOrder.branch,
+        name: hqEditOrder.name,
+        items,
+        memo
+      });
+      setHqEditOrder(null);
+      setHqCart({});
+      setBranchDetail(null);
+      loadOrders();
+      alert('✅ 수정 완료');
+    } catch {
+      alert('오류가 발생했습니다.');
+    } finally {
+      setHqEditSubmitting(false);
+    }
+  }
   async function handleApprove(userId) {
     const res = await apiPost({
       action: 'approveUser',
@@ -3415,6 +3468,27 @@ function HQApp({
   const pending = users.filter(u => u.status === '대기');
   const approved = users.filter(u => u.status === '승인');
   const others = users.filter(u => !['대기', '승인'].includes(u.status));
+  if (hqEditOrder) {
+    if (hqEditStep === 'cart') return React.createElement(CartScreen, {
+      user: { ...user, branch: hqEditOrder.branch, name: hqEditOrder.name },
+      products: hqProducts,
+      cart: hqCart,
+      onCart: (k, v) => setHqCart(p => ({ ...p, [k]: v })),
+      onBack: () => setHqEditStep('catalog'),
+      onSubmit: handleHqEditSubmit,
+      submitting: hqEditSubmitting,
+      isEditing: true
+    });
+    return React.createElement(CatalogScreen, {
+      user: { ...user, branch: hqEditOrder.branch, name: hqEditOrder.name },
+      products: hqProducts,
+      cart: hqCart,
+      onCart: (k, v) => setHqCart(p => ({ ...p, [k]: v })),
+      onGoCart: () => setHqEditStep('cart'),
+      onLogout: () => {},
+      isEditing: true
+    });
+  }
   if (branchDetail) {
     const bOrders = orders.filter(o => o.branch === branchDetail && o.status !== '반려');
     const pMap = {};
@@ -3423,21 +3497,31 @@ function HQApp({
         name: item.name,
         category: item.category,
         total: 0,
-        amt: 0
+        amt: 0,
+        hqAmt: 0
       };
       pMap[item.name].total += item.qty;
-      pMap[item.name].amt += item.amount;
+      pMap[item.name].amt += item.amount || 0;
+      pMap[item.name].hqAmt += item.hqAmount || 0;
     }));
     const branchProds = Object.values(pMap).sort((a, b) => a.category.localeCompare(b.category));
     const branchTotalAmt = branchProds.reduce((s, p) => s + p.amt, 0);
+    const branchTotalHq = branchProds.reduce((s, p) => s + p.hqAmt, 0);
     const branchTotalQty = branchProds.reduce((s, p) => s + p.total, 0);
     return React.createElement(BranchDetailModal, {
       branch: branchDetail,
       orders: bOrders,
       branchProds: branchProds,
       branchTotalAmt: branchTotalAmt,
+      branchTotalHq: branchTotalHq,
       branchTotalQty: branchTotalQty,
-      onClose: () => setBranchDetail(null)
+      onClose: () => setBranchDetail(null),
+      onEditOrder: handleHqEditOrder,
+      onCancelOrder: async (orderId) => {
+        if (!window.confirm('이 발주를 취소하시겠습니까?')) return;
+        const res = await apiPost({ action: 'cancelOrder', orderId });
+        if (res.success) { loadOrders(); setBranchDetail(null); alert('취소 완료'); }
+      }
     });
   }
   return React.createElement("div", {
