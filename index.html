@@ -707,7 +707,29 @@ function CatalogScreen({
     onClick: () => setCat(c)
   }, c))), React.createElement("div", {
     className: "product-list"
-  }, filtered.map(p => {
+  }, isEditing && React.createElement("div", null,
+    Object.keys(cart).filter(k => (cart[k]||0) !== 0).length > 0 && React.createElement("div", {
+      style: { fontSize: 12, fontWeight: 700, color: 'var(--gold)', padding: '8px 0 6px', letterSpacing: '.05em' }
+    }, "✏️ 수정 중인 품목"),
+    products.filter(p => (cart[p.name]||0) !== 0).map(p => {
+      const qty = cart[p.name] || 0;
+      const step = getProductStep(p.name);
+      return React.createElement("div", {
+        key: 'edit-'+p.name,
+        className: "product-item in-cart"
+      }, React.createElement("div", { className: "product-info" },
+        React.createElement("div", { className: "product-name" }, p.name),
+        React.createElement("div", { className: "product-unit" }, p.category, getProductPrice(p) > 0 ? ` · ${getProductPrice(p).toLocaleString()}원` : ''),
+        React.createElement("div", { style: { fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 3 } },
+          "= ", (qty * getProductPrice(p)).toLocaleString(), "원")
+      ), React.createElement("div", { className: "qty-row" },
+        React.createElement("button", { className: "qty-btn", onClick: () => { const s=step; onCart(p.name, allowNegative ? roundStep(qty-s,s) : Math.max(0,roundStep(qty-s,s))); } }, "−"),
+        React.createElement("span", { className: `qty-num${qty===0?' zero':qty<0?' neg':''}` }, qty),
+        React.createElement("button", { className: "qty-btn plus", onClick: () => { const s=step; onCart(p.name, roundStep(qty+s,s)); } }, "+")
+      ));
+    }),
+    React.createElement("div", { style: { fontSize: 12, color: 'var(--text3)', padding: '10px 0 6px', borderTop: '1px solid var(--border)', marginTop: 8 } }, "전체 목록에서 추가:")
+  ), filtered.map(p => {
     const qty = cart[p.name] || 0;
     return React.createElement("div", {
       key: p.name,
@@ -1440,7 +1462,7 @@ function ManagerApp({
     setDistData(null);
     alert('✅ 분출 완료 처리되었습니다.');
   }
-  if (detail) return React.createElement(OrderDetailScreen, {
+  if (detail && !editingOrderId) return React.createElement(OrderDetailScreen, {
     order: detail,
     onBack: () => setDetail(null),
     onApprove: () => handleApprove(detail.orderId),
