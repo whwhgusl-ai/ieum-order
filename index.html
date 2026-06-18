@@ -2924,42 +2924,19 @@ function BranchDetailModal({
     XLSX.writeFile(wb, `${branch}_발주서_${dateStr}.xlsx`);
   }
   return React.createElement("div", {
-    className: "modal-overlay",
-    onClick: onClose
+    className: "screen"
   }, React.createElement("div", {
-    className: "modal-sheet",
-    style: {
-      maxHeight: '90vh',
-      overflowY: 'auto',
-      padding: '20px 0 40px'
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 20px',
-      marginBottom: 16
-    }
-  }, React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: 19,
-      fontWeight: 800
-    }
-  }, branch), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: 'var(--text3)',
-      marginTop: 2
-    }
-  }, "발주 상세 내역")), React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 8,
-      alignItems: 'center'
-    }
+    className: "header"
   }, React.createElement("button", {
+    className: "back-btn",
+    onClick: onClose
+  }, "←"), React.createElement("div", {
+    className: "header-left"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "header-title"
+  }, branch), React.createElement("div", {
+    className: "header-sub"
+  }, "발주 상세 내역"))), React.createElement("button", {
     onClick: exportBranchExcel,
     style: {
       background: 'var(--gold)',
@@ -2972,26 +2949,12 @@ function BranchDetailModal({
       borderRadius: 8,
       fontFamily: 'inherit'
     }
-  }, "📊 엑셀"), React.createElement("button", {
-    onClick: onClose,
-    style: {
-      background: 'var(--surface3)',
-      border: 'none',
-      color: 'var(--text2)',
-      fontSize: 14,
-      cursor: 'pointer',
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, "✕"))), React.createElement("div", {
+  }, "📊 엑셀")), React.createElement("div", {
+    className: "scrollable",
     style: {
       padding: '0 20px'
     }
-  }, orders.length === 0 && React.createElement("div", {
+  }, React.createElement("div", null, orders.length === 0 && React.createElement("div", {
     className: "empty-state"
   }, "발주 내역이 없습니다"), orders.map(o => {
     const amt = o.items.reduce((s, i) => s + i.amount, 0);
@@ -3433,6 +3396,31 @@ function HQApp({
   const pending = users.filter(u => u.status === '대기');
   const approved = users.filter(u => u.status === '승인');
   const others = users.filter(u => !['대기', '승인'].includes(u.status));
+  if (branchDetail) {
+    const bOrders = orders.filter(o => o.branch === branchDetail && o.status !== '반려');
+    const pMap = {};
+    bOrders.forEach(o => o.items.forEach(item => {
+      if (!pMap[item.name]) pMap[item.name] = {
+        name: item.name,
+        category: item.category,
+        total: 0,
+        amt: 0
+      };
+      pMap[item.name].total += item.qty;
+      pMap[item.name].amt += item.amount;
+    }));
+    const branchProds = Object.values(pMap).sort((a, b) => a.category.localeCompare(b.category));
+    const branchTotalAmt = branchProds.reduce((s, p) => s + p.amt, 0);
+    const branchTotalQty = branchProds.reduce((s, p) => s + p.total, 0);
+    return React.createElement(BranchDetailModal, {
+      branch: branchDetail,
+      orders: bOrders,
+      branchProds: branchProds,
+      branchTotalAmt: branchTotalAmt,
+      branchTotalQty: branchTotalQty,
+      onClose: () => setBranchDetail(null)
+    });
+  }
   return React.createElement("div", {
     className: "screen"
   }, React.createElement("div", {
@@ -3958,31 +3946,7 @@ function HQApp({
   }, "수정 완료"), React.createElement("button", {
     className: "btn-ghost",
     onClick: () => setEditModal(null)
-  }, "취소"))), branchDetail && (() => {
-    const bOrders = orders.filter(o => o.branch === branchDetail && o.status !== '반려');
-    const pMap = {};
-    bOrders.forEach(o => o.items.forEach(item => {
-      if (!pMap[item.name]) pMap[item.name] = {
-        name: item.name,
-        category: item.category,
-        total: 0,
-        amt: 0
-      };
-      pMap[item.name].total += item.qty;
-      pMap[item.name].amt += item.amount;
-    }));
-    const branchProds = Object.values(pMap).sort((a, b) => a.category.localeCompare(b.category));
-    const branchTotalAmt = branchProds.reduce((s, p) => s + p.amt, 0);
-    const branchTotalQty = branchProds.reduce((s, p) => s + p.total, 0);
-    return React.createElement(BranchDetailModal, {
-      branch: branchDetail,
-      orders: bOrders,
-      branchProds: branchProds,
-      branchTotalAmt: branchTotalAmt,
-      branchTotalQty: branchTotalQty,
-      onClose: () => setBranchDetail(null)
-    });
-  })());
+  }, "취소"))));
 }
 function App() {
   const [user, setUser] = useState(null);
