@@ -2884,33 +2884,23 @@ function BranchDetailModal({
       designerMap[dName].push(o);
     });
     Object.entries(designerMap).forEach(([dName, dOrders]) => {
-      const rows = [['발주날짜', '제품명', '카테고리', '수량', '직원가', '금액']];
+      const rows = [['발주날짜', '제품명', '카테고리', '수량', '직원가', '직원가금액', '본사가', '본사가금액']];
       let totalQty = 0,
-        totalAmt = 0;
+        totalEmpAmt = 0,
+        totalHqAmt = 0;
       dOrders.forEach(o => {
         const dateLabel = formatDate(o.timestamp).split(' ')[0];
         o.items.forEach(item => {
-          rows.push([dateLabel, item.name, item.category, item.qty, item.employeePrice > 0 ? item.employeePrice : '', item.amount > 0 ? item.amount : '']);
+          rows.push([dateLabel, item.name, item.category, item.qty, item.employeePrice > 0 ? item.employeePrice : '', item.amount > 0 ? item.amount : '', item.hqPrice > 0 ? item.hqPrice : '', item.hqAmount > 0 ? item.hqAmount : '']);
           totalQty += item.qty;
-          totalAmt += item.amount || 0;
+          totalEmpAmt += item.amount || 0;
+          totalHqAmt += item.hqAmount || 0;
         });
-        rows.push(['', '', '', '', '', '']);
+        rows.push(['', '', '', '', '', '', '', '']);
       });
-      rows.push(['[합계]', '', '', totalQty, '', totalAmt > 0 ? totalAmt : '']);
+      rows.push(['[합계]', '', '', totalQty, '', totalEmpAmt > 0 ? totalEmpAmt : '', '', totalHqAmt > 0 ? totalHqAmt : '']);
       const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = [{
-        wch: 10
-      }, {
-        wch: 22
-      }, {
-        wch: 14
-      }, {
-        wch: 6
-      }, {
-        wch: 8
-      }, {
-        wch: 10
-      }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 22 }, { wch: 14 }, { wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 10 }];
       XLSX.utils.book_append_sheet(wb, ws, dName.slice(0, 31));
     });
     const supMap = {};
@@ -2951,21 +2941,26 @@ function BranchDetailModal({
       wch: 10
     }];
     XLSX.utils.book_append_sheet(wb, ws2, '공급사별 합계');
-    const totalRows = [['제품명', '카테고리', '총수량', '직원가합계']];
-    branchProds.forEach(p => {
-      totalRows.push([p.name, p.category, p.total, p.amt > 0 ? p.amt : '']);
+    const supTotalMap = {};
+    orders.forEach(o => {
+      o.items.forEach(item => {
+        const s = item.supplier || item.category || '기타';
+        if (!supTotalMap[s]) supTotalMap[s] = { empAmt: 0, hqAmt: 0 };
+        supTotalMap[s].empAmt += item.amount || 0;
+        supTotalMap[s].hqAmt += item.hqAmount || 0;
+      });
     });
-    if (branchTotalAmt > 0) totalRows.push(['', '[합계]', branchTotalQty, branchTotalAmt]);
+    const totalRows = [['공급사', '직원가합계', '본사가합계']];
+    let grandEmp = 0,
+      grandHq = 0;
+    Object.entries(supTotalMap).forEach(([sup, v]) => {
+      totalRows.push([sup, v.empAmt > 0 ? v.empAmt : '', v.hqAmt > 0 ? v.hqAmt : '']);
+      grandEmp += v.empAmt;
+      grandHq += v.hqAmt;
+    });
+    totalRows.push(['[전체합계]', grandEmp > 0 ? grandEmp : '', grandHq > 0 ? grandHq : '']);
     const ws3 = XLSX.utils.aoa_to_sheet(totalRows);
-    ws3['!cols'] = [{
-      wch: 22
-    }, {
-      wch: 14
-    }, {
-      wch: 8
-    }, {
-      wch: 10
-    }];
+    ws3['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws3, '지점합계');
     XLSX.writeFile(wb, `${branch}_발주서_${dateStr}.xlsx`);
   }
