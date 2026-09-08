@@ -6,7 +6,7 @@ on:
     - cron: "0 */2 * * *"   # 2시간마다 (UTC)
   workflow_dispatch:
 jobs:
-  점검:
+  healthcheck:
     runs-on: ubuntu-latest
     steps:
       - name: GAS 응답 확인 (3회 재시도)
