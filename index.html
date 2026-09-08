@@ -3407,6 +3407,22 @@ function HQApp({
       alert('✅ 수정 완료');
     }
   }
+  async function handleResetPw(u) {
+    const npw = window.prompt("'" + u.name + "' (" + u.userId + ") 계정의 새 비밀번호를 입력하세요. (4자 이상)");
+    if (npw === null) return;
+    const pw = npw.trim();
+    if (pw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
+    if (!window.confirm("'" + u.name + "' 비밀번호를 재설정할까요?")) return;
+    const res = await apiPost({
+      action: 'updateUser',
+      userId: u.userId,
+      branch: u.branch,
+      role: u.role,
+      password: pw
+    });
+    if (res && res.success) alert('✅ 비밀번호가 재설정되었습니다.\n새 비밀번호를 해당 직원에게 전달해 주세요.');
+    else alert('❌ 재설정 실패: ' + ((res && res.message) || '알 수 없는 오류'));
+  }
   function exportExcel() {
     const targetOrders = orders.filter(o => ['승인', '전송완료', '입고완료', '분출완료'].includes(o.status));
     if (!targetOrders.length) {
@@ -3739,6 +3755,18 @@ function HQApp({
       fontFamily: 'inherit'
     }
   }, "지점/역할 수정"), React.createElement("button", {
+    onClick: () => handleResetPw(u),
+    style: {
+      background: 'var(--surface3)',
+      color: 'var(--text2)',
+      border: '1.5px solid var(--border)',
+      borderRadius: 10,
+      padding: '9px 12px',
+      fontSize: 13,
+      cursor: 'pointer',
+      fontFamily: 'inherit'
+    }
+  }, "비번 재설정"), React.createElement("button", {
     onClick: () => handleDeactivate(u.userId),
     style: {
       background: 'var(--surface3)',
