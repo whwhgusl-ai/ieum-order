@@ -208,6 +208,18 @@ async function apiPostNoRead(body) {
     mode: 'no-cors'
   });
 }
+let AUTH_ = null; // 로그인 세션 동안만 메모리에 보관 (새로고침=재로그인 정책 그대로)
+async function apiAdminPost(body) {
+  if (!AUTH_) {
+    alert('세션 정보가 없습니다. 다시 로그인해 주세요.');
+    return { success: false, message: '재로그인 필요' };
+  }
+  const res = await apiPost({ ...body, authId: AUTH_.id, authPw: AUTH_.pw });
+  if (res && res.error === 'unauthorized') {
+    alert('❌ 권한 확인 실패: ' + (res.message || '본사 계정으로 다시 로그인해 주세요.'));
+  }
+  return res;
+}
 function StatusBadge({
   status
 }) {
@@ -269,6 +281,7 @@ function AuthScreen({
         password: password.trim()
       });
       if (res.success) {
+        AUTH_ = { id: userId.trim(), pw: password.trim() };
         onLogin(res.user);
       } else {
         setErrorMsg(res.message || '로그인에 실패했습니다.');
@@ -3354,7 +3367,7 @@ function HQApp({
     }
   }
   async function handleApprove(userId) {
-    const res = await apiPost({
+    const res = await apiAdminPost({
       action: 'approveUser',
       userId
     });
@@ -3364,7 +3377,7 @@ function HQApp({
     } : u));
   }
   async function handleReject(userId, reason) {
-    const res = await apiPost({
+    const res = await apiAdminPost({
       action: 'rejectUser',
       userId,
       reason
@@ -3380,7 +3393,7 @@ function HQApp({
   }
   async function handleDeactivate(userId) {
     if (!window.confirm('이 계정을 비활성화 하시겠습니까?')) return;
-    const res = await apiPost({
+    const res = await apiAdminPost({
       action: 'deactivateUser',
       userId
     });
@@ -3391,7 +3404,7 @@ function HQApp({
   }
   async function handleUpdate() {
     if (!editModal) return;
-    const res = await apiPost({
+    const res = await apiAdminPost({
       action: 'updateUser',
       userId: editModal.userId,
       branch: editBranch,
@@ -3413,7 +3426,7 @@ function HQApp({
     const pw = npw.trim();
     if (pw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
     if (!window.confirm("'" + u.name + "' 비밀번호를 재설정할까요?")) return;
-    const res = await apiPost({
+    const res = await apiAdminPost({
       action: 'updateUser',
       userId: u.userId,
       branch: u.branch,
@@ -4104,15 +4117,15 @@ function App() {
   });
   if (user.role === '본사') return React.createElement(HQApp, {
     user: user,
-    onLogout: () => setUser(null)
+    onLogout: () => { AUTH_ = null; setUser(null); }
   });
   if (user.role === '매니저') return React.createElement(ManagerApp, {
     user: user,
-    onLogout: () => setUser(null)
+    onLogout: () => { AUTH_ = null; setUser(null); }
   });
   return React.createElement(DesignerApp, {
     user: user,
-    onLogout: () => setUser(null)
+    onLogout: () => { AUTH_ = null; setUser(null); }
   });
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
